@@ -1,0 +1,28 @@
+{
+  "name": "js-tfso-auth",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "globalModule": "dist/tfso-auth-global.js",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "auth0-js": "9.8.2",
+    "eventemitter3": "3.1.0",
+    "lodash.defaultsdeep": "4.6.0"
+  },
+  "devDependencies": {
+    "@types/auth0-js": "8.11.7",
+    "@types/lodash.defaultsdeep": "4.6.4",
+    "rollup": "0.67.3",
+    "rollup-plugin-commonjs": "9.2.0",
+    "rollup-plugin-node-resolve": "3.4.0",
+    "rollup-plugin-peer-deps-external": "2.2.0",
+    "rollup-plugin-typescript2": "0.18.0",
+    "typescript": "3.1.6"
+  },
+  "files": [
+    "dist"
+  ]
+}
