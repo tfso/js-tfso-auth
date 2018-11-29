@@ -16,8 +16,7 @@ export default {
             file: pkg.globalModule,
             format: 'iife',
             exports: 'named',
-            name: 'window',
-            extend: true
+            name: 'TfsoAuth'
         }
     ],
     plugins: [

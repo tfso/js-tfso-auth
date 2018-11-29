@@ -1,21 +1,14 @@
-import {AuthOptions, CheckSessionOptions, ParseHashOptions, Auth0DecodedHash, Auth0Error, WebAuth} from 'auth0-js'
+import * as types from './types'
+import * as auth0 from 'auth0-js'
 import promisify from './promisify'
 
-export type Auth0Token = Auth0DecodedHash
-export type Auth0Error = Auth0Error
-
-export interface WebAuthPromisified{
-    checkSession(options: CheckSessionOptions): Promise<Auth0DecodedHash>
-    parseHash(options: ParseHashOptions): Promise<Auth0DecodedHash>
-}
-
-const promisifiyWebAuth = (webAuth:WebAuth):WebAuthPromisified => {
+const promisifiyWebAuth = (webAuth: auth0.WebAuth): types.WebAuthPromisified => {
     return <any>{
         parseHash: promisify(webAuth.parseHash.bind(webAuth)),
         checkSession: promisify(webAuth.checkSession.bind(webAuth))
     }
 }
 
-export default (options: AuthOptions) => {
-    return promisifiyWebAuth(new WebAuth(options))
+export default (options: auth0.AuthOptions) => {
+    return promisifiyWebAuth(new auth0.WebAuth(options))
 }
