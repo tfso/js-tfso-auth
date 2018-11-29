@@ -17,7 +17,7 @@
   "devDependencies": {
     "@types/auth0-js": "8.11.7",
     "@types/lodash.defaultsdeep": "4.6.4",
-    "publish-to-git": "1.1.7",
+    "publish-to-git": "github:tfso/publish-to-git",
     "rollup": "0.67.3",
     "rollup-plugin-commonjs": "9.2.0",
     "rollup-plugin-node-resolve": "3.4.0",
