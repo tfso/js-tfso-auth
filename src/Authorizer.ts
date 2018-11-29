@@ -1,6 +1,7 @@
 import * as types from './types'
 import EventEmitter from 'eventemitter3'
 import createWebAuth from './createWebAuth'
+import defaultsDeep from 'lodash.defaultsdeep'
 import defaultConfig from './defaultConfig'
 
 export class Authorizer extends EventEmitter{
@@ -17,7 +18,7 @@ export class Authorizer extends EventEmitter{
     constructor(config: Partial<types.AuthorizerConfig>, logger: types.Logger){
         super()
         this._logger = logger
-        this._config = Object.assign({}, defaultConfig, config)
+        this._config = defaultsDeep({}, config, defaultConfig)
         this._webAuth = createWebAuth(this._config.optionsAuth0)
     }
 
