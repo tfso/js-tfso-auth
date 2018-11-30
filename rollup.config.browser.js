@@ -8,11 +8,6 @@ export default {
     input: 'src/index.ts',
     output: [
         {
-            file: pkg.main,
-            format: 'es',
-            exports: 'named'
-        },
-        {
             file: pkg.globalModule,
             format: 'iife',
             exports: 'named',
