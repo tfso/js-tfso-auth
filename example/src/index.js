@@ -45,8 +45,9 @@ class App extends React.Component{
             })
         })
 
-        await authorizer.authorize('2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://privacy.24sevenoffice.com', 'privacyadmin')
-        await authorizer.authorize('2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://skriveleif.24sevenoffice.com', 'feilscope')
+        authorizer.authorize('2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://privacy.24sevenoffice.com', 'privacyadmin')
+        authorizer.authorize('2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'http://bank.24sevenoffice.com', 'bank bankagreement')
+        authorizer.authorize('2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://skriveleif.24sevenoffice.com', 'feilscope')
     }
     render(){
         return (

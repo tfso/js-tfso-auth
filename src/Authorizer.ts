@@ -8,6 +8,7 @@ export class Authorizer extends EventEmitter{
     _config: types.AuthorizerConfig
     _logger: types.Logger
     _webAuth: types.WebAuthPromisified
+    _checkSessionCount = 0
     _accesses: {
         [key: string]: types.AccessSuccess | types.AccessFailure
     } = {}
@@ -120,10 +121,12 @@ export class Authorizer extends EventEmitter{
 
     async _checkSession(license: string, audience: string, scope: string): Promise<types.TokenResult>{
         const [identityId, clientId, userId] = license.split(';')
+
+        // NB: We add a serial number to keep each state unique. checkSession needs this when called several times in parallel
         const opts = {
             audience,
             scope,
-            state: `identityId:${identityId};clientId:${clientId};userId:${userId}`,
+            state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
             responseType: 'token',
             redirectUri: this._config.callbackUrl
         }
