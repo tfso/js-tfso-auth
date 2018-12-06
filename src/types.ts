@@ -28,6 +28,7 @@ export interface Logger{
 }
 
 export interface TokenSuccess{
+    key: string
     token: Auth0Token
     error: null
     audience: string
@@ -36,6 +37,7 @@ export interface TokenSuccess{
 }
 
 export interface TokenError{
+    key: string
     token: null
     error: Auth0Error
     audience: string
@@ -46,6 +48,7 @@ export interface TokenError{
 export type TokenResult = TokenSuccess | TokenError
 
 export interface AccessSuccess{
+    key: string
     token: Auth0Token
     error: null
     audience: string
@@ -56,6 +59,7 @@ export interface AccessSuccess{
 }
 
 export interface AccessFailure{
+    key: string
     token: null
     error: Auth0Error
     audience: string
