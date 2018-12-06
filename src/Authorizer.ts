@@ -8,6 +8,7 @@ export class Authorizer extends EventEmitter{
     _config: types.AuthorizerConfig
     _logger: types.Logger
     _webAuth: types.WebAuthPromisified
+    _checkSessionCount = 0
     _accesses: {
         [key: string]: types.AccessSuccess | types.AccessFailure
     } = {}
@@ -120,7 +121,7 @@ export class Authorizer extends EventEmitter{
         const opts = {
             audience,
             scope,
-            state: `identityId:${identityId};clientId:${clientId};userId:${userId};key:${key}`,
+            state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
             responseType: 'token',
             redirectUri: this._config.callbackUrl
         }
