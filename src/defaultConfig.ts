@@ -6,5 +6,6 @@ export default {
     },
     identityApiUrl: 'https://identity.api.24sevenoffice.com',
     loginUrl: () => `/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
+    logoutUrl: () => `/login/auth0/logout.html`,
     callbackUrl: `${window.location.origin}/login/auth0/callback.html?isSilent=true`
 }

@@ -42,6 +42,12 @@ export class Authenticator{
             : this._config.loginUrl
     }
 
+    redirectToLogout(){
+        window.location.href = typeof this._config.logoutUrl === 'function'
+            ? this._config.logoutUrl()
+            : this._config.logoutUrl
+    }
+
     async _getIdentityOrNullIfCookieRequired(){
         const res = await fetch(this._config.identityApiUrl, {
             method: 'GET',

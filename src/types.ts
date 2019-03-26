@@ -8,6 +8,23 @@ export interface WebAuthPromisified{
     parseHash(options: auth0.ParseHashOptions): Promise<auth0.Auth0DecodedHash>
 }
 
+export type LicenseChangeEvent = {
+    newIdentity: any
+    prevIdentity: any
+}
+
+export interface AuthManagerConfig{
+    logoutHandler?: (defaultHandler: () => void) => any
+    licenseChangeHandler?: (event: LicenseChangeEvent, defaultHandler: () => void) => any
+    tokens: TokenConfig[]
+}
+
+export interface TokenConfig{
+    key: string
+    audience: string
+    scopes: string[]
+}
+
 export interface AuthenticatorConfig{
     optionsAuth0: {
         clientID: string
@@ -16,55 +33,72 @@ export interface AuthenticatorConfig{
     }
     identityApiUrl: string
     loginUrl: string | (() => string)
+    logoutUrl: string | (() => string)
     callbackUrl: string
 }
 
 export type AuthorizerConfig = AuthenticatorConfig
 
-export interface Logger{
-    debug: Function
-    info: Function
-    error: Function
-}
-
 export interface TokenSuccess{
-    key: string
+    type: 'success'
+    tokenConfig: TokenConfig
     token: Auth0Token
     error: null
-    audience: string
-    scope: string
     license: string
+    expiresAt: number | null
 }
 
 export interface TokenError{
-    key: string
+    type: 'error'
+    tokenConfig: TokenConfig
     token: null
     error: Auth0Error
-    audience: string
-    scope: string
     license: string
 }
 
 export type TokenResult = TokenSuccess | TokenError
 
 export interface AccessSuccess{
-    key: string
+    type: 'success'
+    tokenConfig: TokenConfig
     token: Auth0Token
     error: null
-    audience: string
-    scope: string
     license: string
+    expiresAt: number | null // Null if no expiry
     scopesAccepted: string[]
-    scopesRequested: string[]
 }
 
 export interface AccessFailure{
-    key: string
+    type: 'failure'
+    tokenConfig: TokenConfig
     token: null
     error: Auth0Error
-    audience: string
-    scope: string
     license: string
     userInteractionRequired: boolean
-    scopesRequested: string[]
+    scopesAccepted: string[]
+}
+
+export type Identity = {
+    license: string
+    identity: {
+        id: string
+    }
+    client: {
+        id: number
+        name: string
+    }
+    user: {
+        id: number
+    }
+    profile: {
+        thumb: {
+            data: string
+        }
+    }
+    locale: {
+        country: string
+        cultureInfo: string
+        timeZoneOffset: string
+        language: string
+    }
 }

@@ -3,10 +3,12 @@ import EventEmitter from 'eventemitter3'
 import createWebAuth from './createWebAuth'
 import defaultsDeep from 'lodash.defaultsdeep'
 import defaultConfig from './defaultConfig'
+import {AccessFailure, AccessSuccess, TokenConfig} from './types'
 
-export class Authorizer extends EventEmitter{
+type Events = 'access-success' | 'access-failure'
+
+export class Authorizer extends EventEmitter<Events>{
     _config: types.AuthorizerConfig
-    _logger: types.Logger
     _webAuth: types.WebAuthPromisified
     _checkSessionCount = 0
     _accesses: {
@@ -16,32 +18,26 @@ export class Authorizer extends EventEmitter{
         [key: string]: boolean
     } = {}
 
-    constructor(config: Partial<types.AuthorizerConfig>, logger: types.Logger){
+    constructor(config: Partial<types.AuthorizerConfig>){
         super()
-        this._logger = logger
         this._config = defaultsDeep({}, config, defaultConfig)
         this._webAuth = createWebAuth(this._config.optionsAuth0)
     }
 
     /**
-     * @param {string} key Some unique key to identify this token
-     * @param {string} license
-     * @param {string} audience
-     * @param {string} scope Empty-space separated list of scopes
-     *
      * This function returns after the first token has been retrieved (or failed).
      * It will also periodically refresh the token, so you need to listen for
      * 'token-update' and 'error' to be informed when the token changes.
      */
-    async authorize(key: string, license: string, audience: string, scope: string){
-        await this._refreshToken(key, license, audience, scope)
-        this._keepTokenFresh(key, license, audience, scope)
-        return this.getAccess(key)
+    async authorize(tokenConfig: TokenConfig, license: string){
+        await this._refreshToken(tokenConfig, license)
+        this._keepTokenFresh(tokenConfig, license)
+        return this.getAccess(tokenConfig.key)
     }
 
-    async authorizeOnce(key: string, license: string, audience: string, scope: string){
-        await this._refreshToken(key, license, audience, scope)
-        return this.getAccess(key)
+    async authorizeOnce(tokenConfig: TokenConfig, license: string){
+        await this._refreshToken(tokenConfig, license)
+        return this.getAccess(tokenConfig.key)
     }
 
     async unauthorize(key: string){
@@ -61,30 +57,30 @@ export class Authorizer extends EventEmitter{
         return this._accesses[key]
     }
 
-    _keepTokenFresh(key: string, license: string, audience: string, scope: string){
-        if(this._accessesToRefresh[key]){
+    _keepTokenFresh(tokenConfig: TokenConfig, license: string){
+        if(this._accessesToRefresh[tokenConfig.key]){
             return
-        }else{
-            this._accessesToRefresh[key] = true
         }
+
+        this._accessesToRefresh[tokenConfig.key] = true
 
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
         const waitAndRefreshAgain = () => {
-            if(!this._accessesToRefresh[key]){
+            if(!this._accessesToRefresh[tokenConfig.key]){
                 return
             }
 
             delay(15 * 60 * 1000)
-                .then(() => this._refreshToken(key, license, audience, scope))
+                .then(() => this._refreshToken(tokenConfig, license))
                 .then(waitAndRefreshAgain)
         }
 
         waitAndRefreshAgain()
     }
 
-    async _refreshToken(key: string, license: string, audience: string, scope: string){
-        const result = await this._checkSession(key, license, audience, scope)
+    async _refreshToken(tokenConfig: TokenConfig, license: string){
+        const result = await this._checkSession(tokenConfig, license)
         if(result.error){
             this._onTokenFailure(<types.TokenError>result)
         }else{
@@ -92,35 +88,43 @@ export class Authorizer extends EventEmitter{
         }
     }
 
-    _onTokenSuccess({key, token, audience, scope, license}: types.TokenSuccess){
-        const scopesAccepted = token.scope ? token.scope.split(' ') : []
-        const scopesRequested = scope.split(' ')
-        const data = {key, token, error: null, audience, scope, license, scopesAccepted, scopesRequested}
-        this._accesses[key] = data
-        this._logger.debug('Token success', data)
-        this.emit('token-update', data)
+    _onTokenSuccess({tokenConfig, token, license, expiresAt}: types.TokenSuccess){
+        const access: AccessSuccess = {
+            type: 'success',
+            tokenConfig,
+            token,
+            error: null,
+            license,
+            expiresAt,
+            scopesAccepted: token.scope ? token.scope.split(' ') : []
+        }
+
+        this._accesses[tokenConfig.key] = access
+        this.emit('access-success', access)
     }
 
-    _onTokenFailure({key, error, audience, scope, license}: types.TokenError){
-        const userInteractionRequired =
-            (error.error === 'login_required' ||
-                error.error === 'consent_required' ||
-                error.error === 'interaction_required')
+    _onTokenFailure({tokenConfig, error, license}: types.TokenError){
+        const access: AccessFailure = {
+            type: 'failure',
+            tokenConfig,
+            token: null,
+            error,
+            license,
+            userInteractionRequired: (error.error === 'login_required' || error.error === 'consent_required' || error.error === 'interaction_required'),
+            scopesAccepted: []
+        }
 
-        const scopesRequested = scope.split(' ')
-        const data = {key, token: null, error, audience, scope, license, userInteractionRequired, scopesRequested}
-        this._accesses[key] = data
-        this._logger.error('Token failure', data)
-        this.emit('error', data)
+        this._accesses[tokenConfig.key] = access
+        this.emit('access-failure', access)
     }
 
-    async _checkSession(key: string, license: string, audience: string, scope: string): Promise<types.TokenResult>{
+    async _checkSession(tokenConfig: TokenConfig, license: string): Promise<types.TokenResult>{
         const [identityId, clientId, userId] = license.split(';')
 
         // NB: We add a serial number to keep each state unique. checkSession needs this when called several times in parallel
         const opts = {
-            audience,
-            scope,
+            audience: tokenConfig.audience,
+            scope: tokenConfig.scopes.join(' '),
             state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
             responseType: 'token',
             redirectUri: this._config.callbackUrl
@@ -128,9 +132,10 @@ export class Authorizer extends EventEmitter{
 
         try{
             const token = await this._webAuth.checkSession(opts)
-            return {key, token, error: null, audience, scope, license}
+            const expiresAt = token.expiresIn !== undefined ? token.expiresIn + Date.now() : null
+            return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
         }catch(error){
-            return {key, token: null, error, audience, scope, license}
+            return {type: 'error', tokenConfig, token: null, error, license}
         }
     }
 }

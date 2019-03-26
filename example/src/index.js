@@ -1,70 +1,116 @@
 import 'react-app-polyfill/ie11'
 import React from 'react'
 import ReactDOM from 'react-dom'
-import {Authenticator, Authorizer} from 'js-tfso-auth'
+import {createAuthManager} from 'js-tfso-auth'
 
-const config = {
+const authenticatorConfig = {
     loginUrl: `https://beta.24sevenoffice.com/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
     callbackUrl: `${window.location.origin}/dummyCallback` // localhost.24sevenoffice.com:3000/dummyCallback is approved in auth0 management
 }
-
-const logger = {
-    debug: (...args) => console.log(...args),
-    info: (...args) => console.log(...args),
-    error: (...args) => console.log(...args)
+const authManagerConfig = {
+    tokens: [
+        {
+            key: '1',
+            audience: 'https://privacy.24sevenoffice.com',
+            scopes: ['privacyadmin']
+        },
+        {
+            key: '2',
+            audience: 'http://bank.24sevenoffice.com',
+            scopes: ['bank', 'bankagreement']
+        },
+        {
+            key: '3',
+            audience: 'https://skriveleif.24sevenoffice.com',
+            scopes: ['feilscope']
+        }
+    ]
 }
 
-const authenticator = new Authenticator(config)
-const authorizer = new Authorizer(config, logger)
+const authManager = createAuthManager(authManagerConfig, authenticatorConfig)
 
 class App extends React.Component{
     state = {
-        errors: [],
-        tokenUpdates: [],
+        isAuthenticating: false,
+        isAuthenticated: false,
+        isAuthorizing: false,
+        isAuthorized: false,
+        accessErrors: [],
+        accesses: [],
         identity: null
     }
     async componentDidMount(){
-        const identity = await authenticator.ensureLoggedIn()
-        this.setState({identity})
-
-        authorizer.on('token-update', e => {
-            this.setState(state => {
-                return {
-                    ...state,
-                    tokenUpdates: [...state.tokenUpdates, e]
-                }
-            })
+        authManager.on('authentication-attempt', (event) => {
+            console.log('authentication-attempt', event)
+            this.setState({isAuthenticating: true, isAuthenticated: false})
+        })
+        authManager.on('authentication-success', (event) => {
+            console.log('authentication-success', event)
+            this.setState({isAuthenticating: false, isAuthenticated: true, identity: event.identity})
+        })
+        authManager.on('authentication-failure', (event) => {
+            console.log('authentication-failure', event)
+            this.setState({isAuthenticating: false, isAuthenticated: false, identity: null})
         })
 
-        authorizer.on('error', e => {
-            this.setState(state => {
-                return {
-                    ...state,
-                    errors: [...state.errors, e]
-                }
-            })
+        authManager.on('authentication-logout', (event) => {
+            console.log('authentication-logout', event)
+            this.setState({isAuthenticating: false, isAuthenticated: false, identity: null})
+        })
+        authManager.on('authentication-licensechange', (event) =>
+            console.log('authentication-licensechange', event)
+        )
+
+        authManager.on('authentication-notifications-unavailable', (event) => {
+            console.log('authentication-notifications-unavailable', event)
         })
 
-        authorizer.authorize('1', '2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://privacy.24sevenoffice.com', 'privacyadmin')
-        authorizer.authorize('2', '2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'http://bank.24sevenoffice.com', 'bank bankagreement')
-        authorizer.authorize('3', '2947b4ae-0d40-447b-886f-dcd3aa11648b;693081080913543;1198', 'https://skriveleif.24sevenoffice.com', 'feilscope')
+        authManager.on('authorization-start', (event) => {
+            console.log('authorization-start', event)
+            this.setState({isAuthorizing: true, isAuthorized: false})
+        })
+        authManager.on('authorization-complete', (event) => {
+            console.log('authorization-complete', event)
+            this.setState({isAuthorizing: false, isAuthorized: true})
+        })
+
+        authManager.on('authorization-attempt', (event) => {
+            console.log('authorization-attempt', event)
+        })
+        authManager.on('authorization-success', (event) => {
+            console.log('authorization-success', event)
+            this.setState(state => ({accesses: [...state.accesses, event.access]}))
+        })
+        authManager.on('authorization-failure', (event) => {
+            console.log('authorization-failure', event)
+            this.setState(state => ({accessErrors: [...state.accessErrors, event.access]}))
+        })
+
+        authManager.login()
     }
     render(){
         return (
-            <div style={{display: 'flex'}}>
-                <div style={{flex: 1, height: '100%'}}>
-                    Identity
-                    <JsonArea value={this.state.identity} />
+            <>
+                isAuthenticating: {this.state.isAuthenticating.toString()} <br />
+                isAuthenticated: {this.state.isAuthenticated.toString()} <br />
+                isAuthorizing: {this.state.isAuthorizing.toString()} <br />
+                isAuthorized: {this.state.isAuthorized.toString()} <br />
+
+                <div style={{display: 'flex'}}>
+                    <div style={{flex: 1, height: '100%'}}>
+                        Identity
+                        <JsonArea value={this.state.identity} />
+                    </div>
+                    <div style={{flex: 1}}>
+                        Successes
+                        <JsonArea value={this.state.accesses} />
+                    </div>
+                    <div style={{flex: 1}}>
+                        Errors
+                        <JsonArea value={this.state.accessErrors} />
+                    </div>
                 </div>
-                <div style={{flex: 1}}>
-                    Successes
-                    <JsonArea value={this.state.tokenUpdates} />
-                </div>
-                <div style={{flex: 1}}>
-                    Errors
-                    <JsonArea value={this.state.errors} />
-                </div>
-            </div>
+            </>
         )
     }
 }
