@@ -27,47 +27,63 @@ export class Authorizer extends EventEmitter<Events>{
     /**
      * This function returns after the first token has been retrieved (or failed).
      * It will also periodically refresh the token, so you need to listen for
-     * 'token-update' and 'error' to be informed when the token changes.
+     * 'access-success' and 'access-failure' to be informed when the token changes.
      */
     async authorize(tokenConfig: TokenConfig, license: string){
         await this._refreshToken(tokenConfig, license)
         this._keepTokenFresh(tokenConfig, license)
-        return this.getAccess(tokenConfig.key)
+        return this.getAccess(tokenConfig.key, license)
     }
 
     async authorizeOnce(tokenConfig: TokenConfig, license: string){
         await this._refreshToken(tokenConfig, license)
-        return this.getAccess(tokenConfig.key)
+        return this.getAccess(tokenConfig.key, license)
     }
 
-    async unauthorize(key: string){
-        delete this._accesses[key]
-        delete this._accessesToRefresh[key]
+    async unauthorize(key: string, license: string){
+        delete this._accesses[this._accessKey(key, license)]
+        delete this._accessesToRefresh[this._accessKey(key, license)]
     }
 
     getAccesses(){
         return Object.values(this._accesses)
     }
 
-    hasAccess(key: string){
-        return !!this.getAccess(key)
+    hasAccess(key: string, license: string){
+        return !!this.getAccess(key, license)
     }
 
-    getAccess(key: string){
-        return this._accesses[key]
+    getAccess(key: string, license: string){
+        return this._accesses[this._accessKey(key, license)]
+    }
+
+    isRefreshing(key: string, license: string){
+        return this._accessesToRefresh[this._accessKey(key, license)]
+    }
+
+    _accessKey(tokenKey: string, license: string){
+        return `${tokenKey}-${license}`
+    }
+
+    _setAccess(access: AccessSuccess | AccessFailure){
+        this._accesses[this._accessKey(access.tokenConfig.key, access.license)] = access
+    }
+
+    _setRefresh(key: string, license: string){
+        this._accessesToRefresh[this._accessKey(key, license)] = true
     }
 
     _keepTokenFresh(tokenConfig: TokenConfig, license: string){
-        if(this._accessesToRefresh[tokenConfig.key]){
+        if(this.isRefreshing(tokenConfig.key, license)){
             return
         }
 
-        this._accessesToRefresh[tokenConfig.key] = true
+        this._setRefresh(tokenConfig.key, license)
 
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
         const waitAndRefreshAgain = () => {
-            if(!this._accessesToRefresh[tokenConfig.key]){
+            if(!this.isRefreshing(tokenConfig.key, license)){
                 return
             }
 
@@ -99,7 +115,7 @@ export class Authorizer extends EventEmitter<Events>{
             scopesAccepted: token.scope ? token.scope.split(' ') : []
         }
 
-        this._accesses[tokenConfig.key] = access
+        this._setAccess(access)
         this.emit('access-success', access)
     }
 
@@ -114,7 +130,7 @@ export class Authorizer extends EventEmitter<Events>{
             scopesAccepted: []
         }
 
-        this._accesses[tokenConfig.key] = access
+        this._setAccess(access)
         this.emit('access-failure', access)
     }
 

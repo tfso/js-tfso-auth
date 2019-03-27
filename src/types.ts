@@ -20,7 +20,7 @@ export interface AuthManagerConfig{
 }
 
 export interface TokenConfig{
-    key: string
+    key: string // A unique identifier for this combination of audience / scopes
     audience: string
     scopes: string[]
 }
