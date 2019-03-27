@@ -45,6 +45,24 @@ export class AuthManager extends EventEmitter<Events>{
         this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
     }
 
+    /*
+    Override .on to get better typescript help
+     */
+    on(event: 'authentication-attempt', fn: () => void, context?: any): this
+    on(event: 'authentication-success', fn: (event: {identity: Identity}) => void, context?: any): this
+    on(event: 'authentication-failure', fn: (event: {err: Error}) => void, context?: any): this
+    on(event: 'authentication-logout', fn: () => void, context?: any): this
+    on(event: 'authentication-licensechange', fn: (event: {newIdentity: Identity, prevIdentity: Identity|null}) => void, context?: any): this
+    on(event: 'authentication-notifications-unavailable', fn: () => void, context?: any): this
+    on(event: 'authorization-start', fn: () => void, context?: any): this
+    on(event: 'authorization-complete', fn: () => void, context?: any): this
+    on(event: 'authorization-attempt', fn: (event: {tokenConfig: TokenConfig, license: string}) => void, context?: any): this
+    on(event: 'authorization-success', fn: (event: {access: AccessSuccess}) => void, context?: any): this
+    on(event: 'authorization-failure', fn: (event: {access: AccessFailure}) => void, context?: any): this
+    on(event: Events, fn: EventEmitter.ListenerFn, context?: any): this{
+        return super.on(event, fn, context)
+    }
+
     async login(){
         this.emit('authentication-attempt')
         try{
