@@ -10,21 +10,21 @@
     "publish": "npm run build && publish-to-git --tag 2.0.2"
   },
   "dependencies": {
-    "ably": "1.1.6",
-    "auth0-js": "9.8.2",
-    "eventemitter3": "3.1.0",
+    "ably": "1.1.8",
+    "auth0-js": "9.10.2",
+    "eventemitter3": "3.1.2",
     "lodash.defaultsdeep": "4.6.0"
   },
   "devDependencies": {
-    "@types/auth0-js": "8.11.7",
-    "@types/lodash.defaultsdeep": "4.6.4",
+    "@types/auth0-js": "9.10.2",
+    "@types/lodash.defaultsdeep": "4.6.6",
     "publish-to-git": "github:tfso/publish-to-git",
     "rollup": "0.67.3",
     "rollup-plugin-commonjs": "9.2.0",
     "rollup-plugin-node-resolve": "3.4.0",
     "rollup-plugin-peer-deps-external": "2.2.0",
     "rollup-plugin-typescript2": "0.18.0",
-    "typescript": "3.1.6"
+    "typescript": "3.4.5"
   },
   "files": [
     "dist",

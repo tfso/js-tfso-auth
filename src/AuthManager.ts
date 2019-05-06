@@ -30,7 +30,7 @@ export class AuthManager extends EventEmitter<Events>{
         super()
         this._authenticator = authenticator
         this._authorizer = authorizer
-        this._authChangeNotifier = new AuthChangeNotifier()
+        this._authChangeNotifier = new AuthChangeNotifier(authenticator)
 
         this._config = defaultsDeep({}, config, {
             tokens: []
