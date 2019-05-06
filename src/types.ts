@@ -84,11 +84,11 @@ export type Identity = {
         id: string
     }
     client: {
-        id: number
+        id: string
         name: string
     }
     user: {
-        id: number
+        id: string
     }
     profile: {
         thumb: {
