@@ -106,7 +106,7 @@ export class Authenticator{
 }
 
 const cacheBustUrl = url => {
-    url = new URL(url)
+    url = new URL(url, window.location.origin)
     url.searchParams.set('_dc', Date.now())
     return url.toString()
 }
