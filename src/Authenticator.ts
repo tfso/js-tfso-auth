@@ -49,7 +49,7 @@ export class Authenticator{
     }
 
     async _getIdentityOrNullIfCookieRequired(){
-        const res = await fetch(this._config.identityApiUrl, {
+        const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -103,4 +103,10 @@ export class Authenticator{
             throw error
         }
     }
+}
+
+const cacheBustUrl = url => {
+    url = new URL(url)
+    url.searchParams.set('_dc', Date.now())
+    return url.toString()
 }
