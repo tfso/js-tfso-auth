@@ -101,4 +101,7 @@ export type Identity = {
         timeZoneOffset: string
         language: string
     }
+    currency: {
+        baseSymbol: null | string
+    }
 }
