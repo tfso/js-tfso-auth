@@ -120,13 +120,20 @@ export class Authorizer extends EventEmitter<Events>{
     }
 
     _onTokenFailure({tokenConfig, error, license}: types.TokenError){
+        const errorsWhereAuthIsRequired = [
+            'login_required',
+            'consent_required',
+            'interaction_required',
+            'unauthorized'
+        ]
+
         const access: AccessFailure = {
             type: 'failure',
             tokenConfig,
             token: null,
             error,
             license,
-            userInteractionRequired: (error.error === 'login_required' || error.error === 'consent_required' || error.error === 'interaction_required'),
+            userInteractionRequired: errorsWhereAuthIsRequired.includes(error.error),
             scopesAccepted: []
         }
 

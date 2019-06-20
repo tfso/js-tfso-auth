@@ -83,7 +83,6 @@ export class Authenticator{
          */
         const opts = {
             audience: 'https://app.24sevenoffice.com',
-            scope: 'NO_SCOPE',
             responseType: 'token',
             redirectUri: this._config.callbackUrl
         }
@@ -91,12 +90,14 @@ export class Authenticator{
         try{
             return await this._webAuth.checkSession(opts)
         }catch(error){
-            const authRequired =
-                (error.error === 'login_required' ||
-                    error.error === 'consent_required' ||
-                    error.error === 'interaction_required')
+            const errorsWhereAuthIsRequired = [
+                'login_required',
+                'consent_required',
+                'interaction_required',
+                'unauthorized'
+            ]
 
-            if(authRequired){
+            if(errorsWhereAuthIsRequired.includes(error.error)){
                 return null
             }
 
