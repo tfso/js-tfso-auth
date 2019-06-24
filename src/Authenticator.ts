@@ -19,11 +19,12 @@ export class Authenticator{
         }
 
         let identity = await this._getIdentityOrNullIfCookieRequired()
+
         if(identity === null){
             await this._setLegacyCookieIfPossible(token)
+            identity = await this._getIdentityOrNullIfCookieRequired()
         }
 
-        identity = await this._getIdentityOrNullIfCookieRequired()
         if(identity === null){
             return null
         }
