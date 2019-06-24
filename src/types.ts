@@ -32,6 +32,7 @@ export interface AuthenticatorConfig{
         configurationBaseUrl: string
     }
     identityApiUrl: string
+    authenticateJwtUrl: string
     loginUrl: string | (() => string)
     logoutUrl: string | (() => string)
     callbackUrl: string

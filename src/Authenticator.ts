@@ -18,7 +18,12 @@ export class Authenticator{
             return null
         }
 
-        const identity = await this._getIdentityOrNullIfCookieRequired()
+        let identity = await this._getIdentityOrNullIfCookieRequired()
+        if(identity === null){
+            await this._setLegacyCookieIfPossible(token)
+        }
+
+        identity = await this._getIdentityOrNullIfCookieRequired()
         if(identity === null){
             return null
         }
@@ -73,6 +78,19 @@ export class Authenticator{
         }
 
         return res.json()
+    }
+
+    async _setLegacyCookieIfPossible(token: types.Auth0Token){
+        try{
+            await fetch(this._config.authenticateJwtUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token.accessToken
+                }
+            })
+        }catch(err){
+            // Ignore any errors. This function is best effort, and will not work in local dev for example.
+        }
     }
 
     async _getIdentityApiTokenOrNulIfAuthRequired(){
