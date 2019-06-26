@@ -98,9 +98,10 @@ export type Identity = {
     }
     locale: {
         country: string
-        cultureInfo: string
-        timeZoneOffset: string
+        culture: string
         language: string
+        timeZone: string
+        timeZoneOffset: string
     }
     currency: {
         baseSymbol: null | string
