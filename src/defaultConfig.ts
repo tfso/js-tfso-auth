@@ -6,7 +6,7 @@ export default {
     },
     identityApiUrl: 'https://identity.api.24sevenoffice.com',
     authenticateJwtUrl: '/login/data/AuthenticateJwt.aspx',
-    loginUrl: () => `/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
-    logoutUrl: () => `/login/auth0/logout.html`,
-    callbackUrl: `${window.location.origin}/login/auth0/callback.html?isSilent=true`
+    loginUrl: () => `/modules/auth/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
+    logoutUrl: () => `/modules/auth/logout`,
+    callbackUrl: `${window.location.origin}/modules/auth/login-callback?isSilent=true`
 }
