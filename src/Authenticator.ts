@@ -85,6 +85,7 @@ export class Authenticator{
         try{
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + token.accessToken
                 }
