@@ -35,23 +35,51 @@ export class Authenticator{
     async ensureLoggedIn(){
         const identity = await this.getCurrentlyLoggedInIdentityOrNull()
         if(identity === null){
-            this.redirectToLogin()
+            this.navigateToLogin()
             return
         }
 
         return identity
     }
 
+    /**
+     * @deprecated since version `2.1.0` in favor of `navigateToLogout`
+     */
     redirectToLogin(){
+        if(process.env.NODE_ENV === 'development'){
+            console.warn('WARNING! Deprecated function called. Function \'redirectToLogin\' has been deprecated, please use \'navigateToLogin\' instead.')
+        }
         window.location.href = typeof this._config.loginUrl === 'function'
             ? this._config.loginUrl()
             : this._config.loginUrl
     }
 
+    navigateToLogin(){
+        window.location.replace(
+            typeof this._config.loginUrl === 'function'
+                ? this._config.loginUrl()
+                : this._config.loginUrl
+        )
+    }
+
+    /**
+     * @deprecated since version `2.1.0` in favor of `navigateToLogout`
+     */
     redirectToLogout(){
+        if(process.env.NODE_ENV === 'development'){
+            console.warn('WARNING! Deprecated function called. Function \'redirectToLogout\' has been deprecated, please use \'navigateToLogout\' instead.')
+        }
         window.location.href = typeof this._config.logoutUrl === 'function'
             ? this._config.logoutUrl()
             : this._config.logoutUrl
+    }
+
+    navigateToLogout(){
+        window.location.replace(
+            typeof this._config.logoutUrl === 'function'
+                ? this._config.logoutUrl()
+                : this._config.logoutUrl
+        )
     }
 
     async _getIdentityOrNullIfCookieRequired(){

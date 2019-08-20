@@ -82,7 +82,7 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     logout(){
-        this._authenticator.redirectToLogout()
+        this._authenticator.navigateToLogout()
     }
 
     authorize(tokenConfig: TokenConfig, license: string){
@@ -106,7 +106,7 @@ export class AuthManager extends EventEmitter<Events>{
     _handleLoggedOut(){
         this.emit('authentication-logout')
 
-        const defaultHandler = () => this._authenticator.redirectToLogin()
+        const defaultHandler = () => this._authenticator.navigateToLogin()
 
         if(this._config.logoutHandler){
             this._config.logoutHandler(defaultHandler)
