@@ -13,7 +13,7 @@
     "ably": "1.1.22",
     "auth0-js": "9.10.2",
     "eventemitter3": "3.1.2",
-    "lodash.defaultsdeep": "4.6.0"
+    "lodash.defaultsdeep": "4.6.1"
   },
   "devDependencies": {
     "@types/auth0-js": "9.10.2",
