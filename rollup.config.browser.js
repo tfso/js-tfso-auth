@@ -16,11 +16,13 @@ export default {
     ],
     plugins: [
         external(),
-        resolve(),
+        resolve({browser: true}),
         typescript({
             rollupCommonJSResolveHack: true,
             clean: true
         }),
-        commonjs()
+        commonjs({
+            namedExports: {'node_modules/ably/browser/static/ably-commonjs.js': ['Realtime']}
+        })
     ]
 }

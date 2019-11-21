@@ -10,7 +10,7 @@
     "publish": "npm run build && publish-to-git --tag 2.0.12"
   },
   "dependencies": {
-    "ably": "1.1.8",
+    "ably": "1.1.22",
     "auth0-js": "9.10.2",
     "eventemitter3": "3.1.2",
     "lodash.defaultsdeep": "4.6.0"
