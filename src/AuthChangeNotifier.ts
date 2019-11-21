@@ -1,4 +1,4 @@
-import * as Ably from 'ably'
+import * as Ably from 'ably/browser/static/ably'
 import EventEmitter from 'eventemitter3'
 import {Authenticator} from './Authenticator'
 
