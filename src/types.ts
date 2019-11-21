@@ -95,6 +95,23 @@ export type Identity = {
         thumb: {
             data: string
         }
+        birthDate: string
+        country: string
+        created: string
+        culture: string
+        firstName: string
+        gender: string
+        id: string
+        identifier: string
+        language: string
+        lastName: string
+        location: string
+        locationCoordinates: string
+        modified: string
+        thumbBase64: string
+        thumbMediaType: string
+        timeZone: string
+        visibility: string
     }
     locale: {
         country: string
