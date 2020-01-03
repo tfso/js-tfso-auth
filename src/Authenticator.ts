@@ -1,6 +1,6 @@
 import * as types from './types'
 import createWebAuth from './createWebAuth'
-import defaultsDeep from 'lodash.defaultsdeep'
+import defaultsDeep from 'lodash/defaultsDeep'
 import defaultConfig from './defaultConfig'
 
 export class Authenticator{

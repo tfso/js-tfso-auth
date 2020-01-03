@@ -1,7 +1,9 @@
 import {Auth0DecodedHash, Auth0Error, CheckSessionOptions, ParseHashOptions} from 'auth0-js'
 
+export {Auth0Error}
+
 export type Auth0Token = Auth0DecodedHash
-export type Auth0Error = Auth0Error
+//export type Auth0Error = Auth0Error
 
 export interface WebAuthPromisified{
     checkSession(options: CheckSessionOptions): Promise<Auth0DecodedHash>

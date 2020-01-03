@@ -1,7 +1,7 @@
 import * as types from './types'
 import EventEmitter from 'eventemitter3'
 import createWebAuth from './createWebAuth'
-import defaultsDeep from 'lodash.defaultsdeep'
+import defaultsDeep from 'lodash/defaultsDeep'
 import defaultConfig from './defaultConfig'
 import {AccessFailure, AccessSuccess, TokenConfig} from './types'
 
