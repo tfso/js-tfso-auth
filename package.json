@@ -19,14 +19,11 @@
     "lodash": "^4.17.14"
   },
   "devDependencies": {
-    "@babel/cli": "^7.5.0",
-    "@babel/core": "^7.5.0",
     "@rollup/plugin-commonjs": "^11.0.0",
     "@rollup/plugin-node-resolve": "6.0.0",
-    "@rollup/plugin-typescript": "^2.0.1",
+    "@rollup/plugin-typescript": "^2.0.2",
     "@types/auth0-js": "9.10.6",
     "@types/lodash": "^4.14.136",
-    "babel-preset-react-app": "^9.0.0",
     "cross-env": "^6.0.3",
     "publish-to-git": "github:tfso/publish-to-git",
     "rollup": "1.27.14",
@@ -36,11 +33,5 @@
   "files": [
     "dist",
     "src"
-  ],
-  "browserslist": [
-    ">0.2%",
-    "ie >= 11",
-    "not dead",
-    "not op_mini all"
   ]
 }

@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom'
 import {createAuthManager} from 'js-tfso-auth'
 
 const authenticatorConfig = {
-    loginUrl: `https://beta.24sevenoffice.com/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
+    loginUrl: `https://beta.24sevenoffice.com/modules/auth/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
     callbackUrl: `${window.location.origin}/dummyCallback` // localhost.24sevenoffice.com:3000/dummyCallback is approved in auth0 management
 }
 const authManagerConfig = {
