@@ -89,6 +89,12 @@ export type Identity = {
     client: {
         id: string
         name: string
+        clientType: {
+            type: string
+            version: number
+        }
+        deactivationDate: string
+        created: string
     }
     user: {
         id: string
