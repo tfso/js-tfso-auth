@@ -19,6 +19,7 @@ export interface AuthManagerConfig{
     logoutHandler?: (defaultHandler: () => void) => any
     licenseChangeHandler?: (event: LicenseChangeEvent, defaultHandler: () => void) => any
     tokens: TokenConfig[]
+    requireValidProfile: boolean
 }
 
 export interface TokenConfig{

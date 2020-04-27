@@ -18,6 +18,12 @@ type Events =
     'authorization-success' |
     'authorization-failure'
 
+const userHasAllRequiredProfileInfo = (identity: Identity) => {
+    const hasClient = identity.client.id !== null && Number(identity.client.id) > 0
+    const hasRequiredLocale = identity.locale.country && identity.locale.culture && identity.locale.language
+    return hasClient && hasRequiredLocale
+}
+
 export class AuthManager extends EventEmitter<Events>{
     private _authenticator: Authenticator
     private _authorizer: Authorizer
@@ -33,7 +39,8 @@ export class AuthManager extends EventEmitter<Events>{
         this._authChangeNotifier = new AuthChangeNotifier(authenticator)
 
         this._config = defaultsDeep({}, config, {
-            tokens: []
+            tokens: [],
+            requireValidProfile: true
         })
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
@@ -68,6 +75,9 @@ export class AuthManager extends EventEmitter<Events>{
         try{
             const identity: Identity = await this._authenticator.ensureLoggedIn()
             this.identity = identity // Set before emitting so it's available when consumer is reacting to the event
+            if(this._config.requireValidProfile){
+                this.requireValidProfile(identity)
+            }
             this.emit('authentication-success', {identity})
             this._authChangeNotifier.listen(identity.license)
         }catch(err){
@@ -79,6 +89,16 @@ export class AuthManager extends EventEmitter<Events>{
         this.emit('authorization-start')
         await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
         this.emit('authorization-complete')
+    }
+
+    hasValidProfile(identity: Identity){
+        return userHasAllRequiredProfileInfo(identity)
+    }
+
+    requireValidProfile(identity: Identity){
+        if(!userHasAllRequiredProfileInfo(identity)){
+            document.location.href = 'https://app.24sevenoffice.com/modules/profile2/#profile'
+        }
     }
 
     logout(){
