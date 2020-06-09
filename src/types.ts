@@ -82,6 +82,13 @@ export interface AccessFailure{
     scopesAccepted: string[]
 }
 
+export type Supplier = {
+    id: string
+    name: string
+    tfsoClientId: number
+    isOwner: boolean
+}
+
 export type Identity = {
     license: string
     identity: {
@@ -96,6 +103,7 @@ export type Identity = {
         }
         deactivationDate: string
         created: string
+        suppliers: Supplier[]
     }
     user: {
         id: string
