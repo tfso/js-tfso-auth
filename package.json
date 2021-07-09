@@ -1,5 +1,5 @@
 {
-  "name": "js-tfso-auth",
+  "name": "@tfso/js-auth",
   "version": "2.0.18",
   "private": true,
   "main": "dist/index.js",
@@ -9,8 +9,7 @@
     "build": "npm run build:clean && npm run build:module && npm run build:browser",
     "build:clean": "rm -rf dist",
     "build:module": "tsc -p tsconfig.json",
-    "build:browser": "rollup -c rollup.config.browser.js",
-    "publish": "npm run build && publish-to-git --tag 2.0.18"
+    "build:browser": "rollup -c rollup.config.browser.js"
   },
   "dependencies": {
     "ably": "^1.1.22",
@@ -29,9 +28,5 @@
     "rollup": "1.27.14",
     "tslib": "^1.10.0",
     "typescript": "3.7.2"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }

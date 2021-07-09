@@ -1,4 +1,4 @@
-# js-tfso-auth
+# js-auth
 
 ## Config
 
