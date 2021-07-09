@@ -1,7 +1,7 @@
 {
   "name": "@tfso/js-auth",
   "repository": "https://github.com/tfso/js-tfso-auth",
-  "version": "2.0.19",
+  "version": "3.0.0",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
