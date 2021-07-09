@@ -1,7 +1,7 @@
 import 'react-app-polyfill/ie11'
 import React from 'react'
 import ReactDOM from 'react-dom'
-import {createAuthManager} from 'js-tfso-auth'
+import {createAuthManager} from '@tfso/js-auth'
 
 const authenticatorConfig = {
     loginUrl: `https://beta.24sevenoffice.com/modules/auth/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,

@@ -1,16 +1,14 @@
 {
-  "name": "js-tfso-auth",
+  "name": "@tfso/js-auth",
+  "repository": "https://github.com/tfso/js-tfso-auth",
   "version": "2.0.18",
-  "private": true,
-  "main": "dist/index.js",
-  "globalModule": "dist/TfsoAuth.js",
-  "types": "dist/index.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "npm run build:clean && npm run build:module && npm run build:browser",
     "build:clean": "rm -rf dist",
     "build:module": "tsc -p tsconfig.json",
-    "build:browser": "rollup -c rollup.config.browser.js",
-    "publish": "npm run build && publish-to-git --tag 2.0.18"
+    "build:browser": "rollup -c rollup.config.browser.js"
   },
   "dependencies": {
     "ably": "^1.1.22",
@@ -25,13 +23,8 @@
     "@types/auth0-js": "9.10.6",
     "@types/lodash": "^4.14.136",
     "cross-env": "^6.0.3",
-    "publish-to-git": "github:tfso/publish-to-git",
     "rollup": "1.27.14",
     "tslib": "^1.10.0",
     "typescript": "3.7.2"
-  },
-  "files": [
-    "dist",
-    "src"
-  ]
+  }
 }
