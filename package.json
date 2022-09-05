@@ -2,8 +2,8 @@
   "name": "@tfso/js-auth",
   "repository": "https://github.com/tfso/js-tfso-auth",
   "version": "3.0.0",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "npm run build:clean && npm run build:module && npm run build:browser",
     "build:clean": "rm -rf dist",
