@@ -123,6 +123,10 @@ export class AuthManager extends EventEmitter<Events>{
         return this._authenticator
     }
 
+    getConfig() {
+        return this._config
+    }
+
     _handleLoggedOut(){
         this.emit('authentication-logout')
 
