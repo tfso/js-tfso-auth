@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: build npm package
-        uses: tfso/gh-action-helpers/npm-build@v1.5.1
+        uses: tfso/gh-action-helpers/npm-build@v1.8.0
         id: npm
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
