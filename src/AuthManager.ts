@@ -123,7 +123,7 @@ export class AuthManager extends EventEmitter<Events>{
         return this._authenticator
     }
 
-    getTokens() {
+    getTokenConfig() {
         return this._config.tokens
     }
 
