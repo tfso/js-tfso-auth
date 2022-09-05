@@ -23,7 +23,7 @@ jobs:
       deploy: ${{ steps.npm.outputs.deploy }}
     steps:
       - name: build npm package
-        uses: tfso/gh-action-helpers/yarn-build@v1.5.0
+        uses: tfso/gh-action-helpers/npm-build@v1.5.0
         id: npm
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
