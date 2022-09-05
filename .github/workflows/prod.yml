@@ -1,0 +1,69 @@
+name: (Release) Prod
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+\.[0-9]+\.[0-9]+'
+  workflow_dispatch:
+
+env:
+  TEAM_NAME: 'TFSO'
+  MODULE_NAME: 'js-tfso-auth'
+
+jobs:
+  version: 
+    runs-on: ubuntu-latest
+    name: build artifact
+    outputs: 
+      version: v${{ steps.semver.outputs.fullversion }}
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+    steps:
+      - name: extract tag version
+        id: semver 
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.ref }}
+          version_extractor_regex: 'refs\/tags\/v(.*)$'
+
+  prod:
+    if: needs.version.outputs.prerelease == ''
+    needs: version
+    environment: prod
+    name: prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: artifact naming convention for deployment.api/v2/staticsite
+        id: artifact
+        run: |
+          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
+          echo "::set-output name=version::$(echo ${{ needs.version.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
+
+      - uses: tfso/action-deployment@v1.0.2
+        name: Deploy
+        with:
+          service_name: ${{ format('tfso-website-{0}', steps.artifact.outputs.name) }}
+          version: ${{ steps.artifact.outputs.version }}
+          team: ${{ env.TEAM_NAME }}
+          module: ${{ env.MODULE_NAME }}
+          deployment_token: ${{ secrets.DEPLOYMENT_API_TOKEN }}
+          environment: prod
+          release-channel: false
+          type: website
+
+      - uses: tfso/action-changelog-release@v1.1.0
+        name: create github release
+        id: release
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: tfso/action-changelog-tfso@v1.2.0
+        name: update internal changelog
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          google_private_key: ${{ secrets.GOOGLE_CHANGELOG_PRIVATE_KEY }}
+          google_changelog_spreadsheets_id: ${{ secrets.GOOGLE_CHANGELOG_SPREADSHEETS_ID }}
+          google_email: ${{ secrets.GOOGLE_CHANGELOG_EMAIL }}
+          service_name: ${{ github.event.repository.name }}
+          team: ${{ env.TEAM_NAME }}
+          module: ${{ env.MODULE_NAME }}
+          release_type: ${{ steps.release.outputs.release_type }}

@@ -1,0 +1,106 @@
+name: Build
+on:
+  push:
+    tags-ignore:
+      - '*'
+    branches:
+      - '**'
+
+env:
+  TEAM_NAME: 'TFSO'
+  MODULE_NAME: 'js-tfso-auth'
+
+  DEFAULT_BUMP: patch
+  .INITIAL_VERSION: 0.0.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: build artifact
+    outputs: 
+      version: ${{ steps.npm.outputs.version }}
+      prerelease: ${{ steps.npm.outputs.prerelease }}
+      deploy: ${{ steps.npm.outputs.deploy }}
+    steps:
+      - name: build npm package
+        uses: tfso/gh-action-helpers/yarn-build@v1.5.0
+        id: npm
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_GLOBAL_TOKEN: ${{ secrets.TFSO_REPO_READ }}
+          NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
+          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
+          INITIAL_VERSION: ${{ env.INITIAL_VERSION }}
+          TRUNCATE_PRERELEASE: false
+          NODE_VERSION: 16
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: asset
+          path: build
+          retention-days: 7 
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+    name: build package
+    steps:
+      - name: download packages
+        uses: actions/download-artifact@v2
+        
+      - name: zip package
+        run: |
+          cd asset && zip -r ./../asset.zip .
+
+      - name: artifact naming convention for deployment.api/v2/staticsite
+        id: artifact
+        run: |
+          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
+          echo "::set-output name=version::$(echo ${{ needs.build.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
+
+      - name: set vars
+        id: vars
+        run: |
+          echo "::set-output name=source::$(echo "./asset.zip")"
+          echo "::set-output name=destination::$(echo "${{ format('s3://{0}/github-artifacts/tfso/{1}/{2}.zip', secrets.AWS_ARTIFACT_BUCKET, format('tfso-website-{0}', steps.artifact.outputs.name), steps.artifact.outputs.version) }}")"
+
+  rc:
+    if: needs.build.outputs.prerelease
+    needs: [build, package]
+    environment: release-channel
+    name: release channel
+    runs-on: ubuntu-latest
+    steps:
+      - name: artifact naming convention for deployment.api/v2/staticsite
+        id: artifact
+        run: |
+          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
+          echo "::set-output name=version::$(echo ${{ needs.build.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
+
+      - uses: tfso/action-deployment@v1.0.2
+        name: Deploy
+        with:
+          service_name: ${{ format('tfso-website-{0}', steps.artifact.outputs.name) }}
+          version: ${{ steps.artifact.outputs.version }}
+          team: ${{ env.TEAM_NAME }}
+          module: ${{ env.MODULE_NAME }}
+          deployment_token: ${{ secrets.DEPLOYMENT_API_TOKEN }}
+          environment: beta
+          release-channel: true
+          type: website
+
+  tag:
+    if: needs.build.outputs.prerelease == ''
+    needs: [build, package]
+    runs-on: ubuntu-latest
+    name: push tag
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: push tag
+        uses: anothrNick/github-tag-action@1.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.TFSO_REPO_TAG }}
+          CUSTOM_TAG: ${{ needs.build.outputs.version }}
