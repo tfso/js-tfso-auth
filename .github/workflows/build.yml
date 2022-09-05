@@ -1,59 +1,91 @@
 name: Build
+
 on:
   push:
-    tags-ignore:
-      - '*'
     branches:
       - '**'
+    tags-ignore:
+      - '*.*'
 
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
     inputs:
       deploy:
         type: boolean
         required: true
-        description: Deploy service
+        description: Deploy package
 
 env:
-  INITIAL_VERSION: 3.0.0
+  INITIAL_VERSION: 3.1.0
   DEFAULT_BUMP: patch
-  TRUNCATE_PRERELEASE: false
 
-  NODE_VERSION: 16
-
+  FILES: |
+    dist/
+    src/
+    package.json
+    package-lock.json
+    README.md
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build
+    name: build
     outputs:
       version: ${{ steps.npm.outputs.version }}
       prerelease: ${{ steps.npm.outputs.prerelease }}
       deploy: ${{ steps.npm.outputs.deploy }}
 
     steps:
-      - name: Build npm package
-        uses: tfso/gh-action-helpers/npm-build@v1.8.0
+      - name: build npm package
+        uses: tfso/gh-action-helpers/yarn-build@v1.5.1
         id: npm
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_GLOBAL_TOKEN: ${{ secrets.TFSO_REPO_READ }}
           NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
           INITIAL_VERSION: ${{ env.INITIAL_VERSION }}
-          TRUNCATE_PRERELEASE: ${{ env.TRUNCATE_PRERELEASE }}
-          NODE_VERSION: ${{ env.NODE_VERSION }}
+          TRUNCATE_PRERELEASE: true
+          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: tfso/gh-action-helpers/build-and-push@v1.0.1
+      - name: upload artifact
+        uses: actions/upload-artifact@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-          image: ${{ format('tfso/{0}', github.event.repository.name) }}:${{ steps.npm.outputs.version }}
-          push: ${{ steps.npm.outputs.deploy == 'true' || github.event.inputs.deploy == 'true' }}
+          name: artifact
+          path: ${{ env.FILES }}
+          retention-days: 7
 
-  tag:
+  upload:
     if: needs.build.outputs.deploy == 'true' || github.event.inputs.deploy == 'true'
     needs: build
     runs-on: ubuntu-latest
-    name: Push tag
+    name: upload package
+    steps:
+      - name: download workflow artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: artifact
+
+      - name: zip all matrix packages to a single package
+        run: |
+          zip -r artifact.zip .
+      - name: set vars
+        id: vars
+        run: |
+          echo "::set-output name=source::$( echo "./artifact.zip")"
+          echo "::set-output name=destination::$(echo "${{ format('s3://{0}/github-artifacts/tfso/{1}/{2}.zip', secrets.AWS_ARTIFACT_BUCKET, format('tfso-{0}', github.event.repository.name), needs.build.outputs.version) }}")"
+      - name: upload package to S3
+        run: |
+          aws s3 cp ${{ steps.vars.outputs.source }} ${{ steps.vars.outputs.destination }}
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ARTIFACT_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ARTIFACT_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'eu-west-1'
+
+  tag:
+    if: needs.build.outputs.deploy == 'true' || github.event.inputs.deploy == 'true'
+    needs: [build, upload]
+    runs-on: ubuntu-latest
+    name: push tag
     steps:
       - name: checkout
         uses: actions/checkout@v2
