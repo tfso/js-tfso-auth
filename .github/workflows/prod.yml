@@ -4,60 +4,80 @@ on:
   push:
     tags:
       - 'v[0-9]+\.[0-9]+\.[0-9]+'
-  workflow_dispatch:
 
 env:
-  TEAM_NAME: 'TFSO'
-  MODULE_NAME: 'js-tfso-auth'
+  SERVICE_NAME: js-tfso-auth
+  TEAM_NAME: tfso
+  MODULE_NAME: js-tfso-auth
+
+  ENVIRONMENT: prod
+
+  # environment variables prefixed with `TFSO_` will be exposed in rancher 2 on deploy without the prefix
+  TFSO_NODE_ENV: prod
 
 jobs:
-  version: 
+  setup:
+    if: github.ref_type == 'tag' && env.SERVICE_NAME
     runs-on: ubuntu-latest
-    name: build artifact
-    outputs: 
+    environment: ${{ env.ENVIRONMENT }}
+    outputs:
       version: v${{ steps.semver.outputs.fullversion }}
       prerelease: ${{ steps.semver.outputs.prerelease }}
+      services: ${{ steps.script.outputs.result }}
+
     steps:
       - name: extract tag version
-        id: semver 
+        id: semver
         uses: booxmedialtd/ws-action-parse-semver@v1
         with:
           input_string: ${{ github.ref }}
           version_extractor_regex: 'refs\/tags\/v(.*)$'
 
-  prod:
-    if: needs.version.outputs.prerelease == ''
-    needs: version
-    environment: prod
-    name: prod
+      - name: extract services
+        uses: actions/github-script@v6
+        id: script
+        env:
+          SERVICES: ${{ env.SERVICE_NAME }}
+        with:
+          result-encoding: string
+          script: |
+            return JSON.stringify(String(process.env.SERVICES).split(/[\n\s]/i).filter(v => v.length > 0))
+  deploy:
+    if: needs.setup.outputs.prerelease == ''
+    name: Deploy
     runs-on: ubuntu-latest
-    steps:
-      - name: artifact naming convention for deployment.api/v2/staticsite
-        id: artifact
-        run: |
-          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
-          echo "::set-output name=version::$(echo ${{ needs.version.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
+    needs: setup
+    strategy:
+      matrix:
+        SERVICE_NAME: ${{ fromJson(needs.setup.outputs.services) }}
+      max-parallel: 1
 
-      - uses: tfso/action-deployment@v1.0.2
+    steps:
+      - uses: tfso/action-deployment@v1.0.3
         name: Deploy
         with:
-          service_name: ${{ format('tfso-website-{0}', steps.artifact.outputs.name) }}
-          version: ${{ steps.artifact.outputs.version }}
+          type: ${{ env.DEPLOYMENT_TYPE || 'api' }}
+          service_name: ${{ matrix.SERVICE_NAME }}
+          image_name: ${{ format('tfso/{0}', github.event.repository.name) }}
+          version: ${{ needs.setup.outputs.version }}
           team: ${{ env.TEAM_NAME }}
           module: ${{ env.MODULE_NAME }}
           deployment_token: ${{ secrets.DEPLOYMENT_API_TOKEN }}
-          environment: prod
-          release-channel: false
-          type: website
+          environment: ${{ env.ENVIRONMENT }}
+          container-port: ${{ env.CONTAINER_PORT || 3000 }}
+          http-endpoint: ${{ env.ENDPOINT }}
 
+  release:
+    name: release
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
       - uses: tfso/action-changelog-release@v1.1.0
-        name: create github release
+        name: Create Github Release
         id: release
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: tfso/action-changelog-tfso@v1.2.0
-        name: update internal changelog
+      - uses: tfso/action-changelog-tfso@v1.2.3
+        name: Update internal changelog
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           google_private_key: ${{ secrets.GOOGLE_CHANGELOG_PRIVATE_KEY }}

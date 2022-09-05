@@ -6,95 +6,54 @@ on:
     branches:
       - '**'
 
-env:
-  TEAM_NAME: 'TFSO'
-  MODULE_NAME: 'js-tfso-auth'
+  workflow_dispatch:
+    inputs:
+      deploy:
+        type: boolean
+        required: true
+        description: Deploy service
 
+env:
+  INITIAL_VERSION: 3.0.0
   DEFAULT_BUMP: patch
-  .INITIAL_VERSION: 0.0.1
+  TRUNCATE_PRERELEASE: false
+
+  NODE_VERSION: 16
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: build artifact
-    outputs: 
+    name: Build
+    outputs:
       version: ${{ steps.npm.outputs.version }}
       prerelease: ${{ steps.npm.outputs.prerelease }}
       deploy: ${{ steps.npm.outputs.deploy }}
+
     steps:
-      - name: build npm package
-        uses: tfso/gh-action-helpers/npm-build@v1.5.0
+      - name: Build npm package
+        uses: tfso/gh-action-helpers/npm-build@v1.8.0
         id: npm
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_GLOBAL_TOKEN: ${{ secrets.TFSO_REPO_READ }}
           NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
-          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
           INITIAL_VERSION: ${{ env.INITIAL_VERSION }}
-          TRUNCATE_PRERELEASE: false
-          NODE_VERSION: 16
+          TRUNCATE_PRERELEASE: ${{ env.TRUNCATE_PRERELEASE }}
+          NODE_VERSION: ${{ env.NODE_VERSION }}
 
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
+      - name: Build and push Docker image
+        uses: tfso/gh-action-helpers/build-and-push@v1.0.1
         with:
-          name: asset
-          path: build
-          retention-days: 7 
-
-  package:
-    needs: build
-    runs-on: ubuntu-latest
-    name: build package
-    steps:
-      - name: download packages
-        uses: actions/download-artifact@v2
-        
-      - name: zip package
-        run: |
-          cd asset && zip -r ./../asset.zip .
-
-      - name: artifact naming convention for deployment.api/v2/staticsite
-        id: artifact
-        run: |
-          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
-          echo "::set-output name=version::$(echo ${{ needs.build.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
-
-      - name: set vars
-        id: vars
-        run: |
-          echo "::set-output name=source::$(echo "./asset.zip")"
-          echo "::set-output name=destination::$(echo "${{ format('s3://{0}/github-artifacts/tfso/{1}/{2}.zip', secrets.AWS_ARTIFACT_BUCKET, format('tfso-website-{0}', steps.artifact.outputs.name), steps.artifact.outputs.version) }}")"
-
-  rc:
-    if: needs.build.outputs.prerelease
-    needs: [build, package]
-    environment: release-channel
-    name: release channel
-    runs-on: ubuntu-latest
-    steps:
-      - name: artifact naming convention for deployment.api/v2/staticsite
-        id: artifact
-        run: |
-          echo "::set-output name=name::$(echo ${{ env.PUBLIC_URL }} | grep -Po '\K[^\/]*$')"
-          echo "::set-output name=version::$(echo ${{ needs.build.outputs.version }} | sed 's/[^a-zA-Z0-9]/-/g')"
-
-      - uses: tfso/action-deployment@v1.0.2
-        name: Deploy
-        with:
-          service_name: ${{ format('tfso-website-{0}', steps.artifact.outputs.name) }}
-          version: ${{ steps.artifact.outputs.version }}
-          team: ${{ env.TEAM_NAME }}
-          module: ${{ env.MODULE_NAME }}
-          deployment_token: ${{ secrets.DEPLOYMENT_API_TOKEN }}
-          environment: beta
-          release-channel: true
-          type: website
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          image: ${{ format('tfso/{0}', github.event.repository.name) }}:${{ steps.npm.outputs.version }}
+          push: ${{ steps.npm.outputs.deploy == 'true' || github.event.inputs.deploy == 'true' }}
 
   tag:
-    if: needs.build.outputs.prerelease == ''
-    needs: [build, package]
+    if: needs.build.outputs.deploy == 'true' || github.event.inputs.deploy == 'true'
+    needs: build
     runs-on: ubuntu-latest
-    name: push tag
+    name: Push tag
     steps:
       - name: checkout
         uses: actions/checkout@v2
