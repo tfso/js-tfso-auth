@@ -9,7 +9,7 @@ export default {
     input: 'src/index.ts',
     output: [
         {
-            file: path.join(config.compilerOptions.outDir ?? '', 'TfsoAuth.js'),
+            file: path.join(config.compilerOptions.outDir || '', 'TfsoAuth.js'),
             format: 'iife',
             exports: 'named',
             name: 'TfsoAuth'
