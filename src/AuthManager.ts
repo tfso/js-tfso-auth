@@ -163,7 +163,7 @@ export class AuthManager extends EventEmitter<Events>{
 
     async _handleAuthChange(){
         const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
-        if(identity === null){
+        if(identity == null){
             return this._handleLoggedOut()
         }
 

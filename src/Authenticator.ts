@@ -14,18 +14,18 @@ export class Authenticator{
 
     async getCurrentlyLoggedInIdentityOrNull(){
         const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
-        if(token === null){
+        if(token == null){
             return null
         }
 
         let identity = await this._getIdentityOrNullIfCookieRequired()
 
-        if(identity === null){
+        if(identity == null){
             await this._setLegacyCookieIfPossible(token)
             identity = await this._getIdentityOrNullIfCookieRequired()
         }
 
-        if(identity === null){
+        if(identity == null){
             return null
         }
 
@@ -34,7 +34,7 @@ export class Authenticator{
 
     async ensureLoggedIn(){
         const identity = await this.getCurrentlyLoggedInIdentityOrNull()
-        if(identity === null){
+        if(identity == null){
             this.redirectToLogin()
             return
         }
