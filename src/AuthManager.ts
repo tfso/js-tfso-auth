@@ -19,8 +19,8 @@ type Events =
     'authorization-failure'
 
 const userHasAllRequiredProfileInfo = (identity: Identity) => {
-    const hasClient = identity.client.id !== null && Number(identity.client.id) > 0
-    const hasRequiredLocale = identity.locale.country && identity.locale.culture && identity.locale.language
+    const hasClient = identity?.client?.id !== null && Number(identity?.client?.id) > 0
+    const hasRequiredLocale = identity?.locale?.country && identity?.locale?.culture && identity?.locale?.language
     return hasClient && hasRequiredLocale
 }
 
