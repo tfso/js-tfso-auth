@@ -52,4 +52,4 @@ jobs:
         uses: tfso/action-helpers/tag@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CUSTOM_TAG: ${{ needs.build.outputs.version }}
+          tag: ${{ needs.build.outputs.version }}
