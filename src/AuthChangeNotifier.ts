@@ -76,7 +76,7 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
                 this._lastLoginCheck = currentTime
 
                 const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
-                if(identity === null){
+                if(!identity){
                     this.emit('logout')
                 }
             }

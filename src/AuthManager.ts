@@ -19,8 +19,8 @@ type Events =
     'authorization-failure'
 
 const userHasAllRequiredProfileInfo = (identity: Identity) => {
-    const hasClient = identity.client.id !== null && Number(identity.client.id) > 0
-    const hasRequiredLocale = identity.locale.country && identity.locale.culture && identity.locale.language
+    const hasClient = identity?.client?.id != null && Number(identity?.client?.id) > 0
+    const hasRequiredLocale = identity?.locale?.country && identity?.locale?.culture && identity?.locale?.language
     return hasClient && hasRequiredLocale
 }
 
@@ -163,11 +163,11 @@ export class AuthManager extends EventEmitter<Events>{
 
     async _handleAuthChange(){
         const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
-        if(identity === null){
+        if(!identity){
             return this._handleLoggedOut()
         }
 
-        if(identity.license !== (this.identity !== null ? this.identity.license : '')){
+        if(identity.license !== (this.identity != null ? this.identity.license : '')){
             return this._handleLicenseChanged(identity)
         }
     }

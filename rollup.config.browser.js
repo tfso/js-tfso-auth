@@ -1,13 +1,15 @@
+import path from 'path'
+
 import commonjs from '@rollup/plugin-commonjs'
 import resolve from '@rollup/plugin-node-resolve'
 import typescript from '@rollup/plugin-typescript'
-import pkg from './package.json'
+import config from './tsconfig-browser.json'
 
 export default {
     input: 'src/index.ts',
     output: [
         {
-            file: pkg.globalModule,
+            file: path.join(config.compilerOptions.outDir || '', 'TfsoAuth.js'),
             format: 'iife',
             exports: 'named',
             name: 'TfsoAuth'

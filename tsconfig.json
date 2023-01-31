@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "outDir": "dist",
-    "module": "esnext",
-    "target": "esnext",
-    "lib": ["es2018", "dom"],
+    "module": "ESNext",
+    "target": "ES6",
+    "lib": ["ES2018", "DOM"],
     "sourceMap": true,
     "allowJs": false,
     "jsx": "react",
