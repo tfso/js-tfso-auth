@@ -5,95 +5,94 @@ on:
         tags:
             - 'v[0-9]+\.[0-9]+\.[0-9]+-*' # only preleases, eg v1.0.1-beta.1
 
+env:
+  FILES: |
+    dist/
+    src/
+    package.json
+    package-lock.json
+    README.md
+
 jobs:
-    setup:
-        runs-on: ubuntu-latest
-        name: find version
-        outputs:
-            version: v${{ steps.semver.outputs.fullversion }}
-            prerelease: ${{ steps.semver.outputs.prerelease }}
-        steps:
-            - name: extract tag version
-              id: semver
-              uses: booxmedialtd/ws-action-parse-semver@v1
-              with:
-                  input_string: ${{ github.ref }}
-                  version_extractor_regex: 'refs\/tags\/v(.*)$'
+  setup:
+    runs-on: ubuntu-latest
+    name: find version
+    outputs:
+      version: v${{ steps.semver.outputs.fullversion }}
+      prerelease: ${{ steps.semver.outputs.prerelease }}
+    steps:
+      - name: extract tag version
+        id: semver
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.ref }}
+          version_extractor_regex: 'refs\/tags\/v(.*)$'
 
-    download:
-        if: needs.setup.outputs.prerelease
-        runs-on: ubuntu-latest
-        name: download package
-        needs: setup
-        steps:
-            - name: set vars
-              id: vars
-              run: |
-                  echo "::set-output name=source::$(echo "${{ format('s3://{0}/github-artifacts/tfso/{1}/{2}.zip', secrets.AWS_ARTIFACT_BUCKET, format('tfso-{0}', github.event.repository.name), needs.setup.outputs.version) }}")"
-                  echo "::set-output name=destination::$( echo "./package.zip")"
+  build:
+    if: needs.setup.outputs.prerelease
+    runs-on: ubuntu-latest
+    name: download package
+    needs: setup
+    steps:
+      - name: build npm package
+        uses: tfso/action-helpers/npm-build@v1
+        id: npm
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
+          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
+          CUSTOM_TAG: ${{ needs.setup.outputs.version }}
 
-            - name: download package from S3
-              shell: bash
-              run: |
-                  aws s3 cp ${{ steps.vars.outputs.source }} ${{ steps.vars.outputs.destination }}
-              env:
-                  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ARTIFACT_ACCESS_KEY_ID }}
-                  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ARTIFACT_SECRET_ACCESS_KEY }}
-                  AWS_DEFAULT_REGION: 'eu-west-1'
+      - name: upload package
+        uses: actions/upload-artifact@v3
+        with:
+          name: package
+          path: ${{ env.FILES }}
+          retention-days: 7
 
-            - name: unzip package
-              run: |
-                  unzip package.zip
-                  rm -f package.zip
-            - name: upload package
-              uses: actions/upload-artifact@v2
-              with:
-                  name: package
-                  path: .
-                  retention-days: 90
+  publish:
+    runs-on: ubuntu-latest
+    name: publish
+    needs: [setup, build]
+    steps:
+      - name: download package
+        uses: actions/download-artifact@v3
+        with:
+          name: package
 
-    publish:
-        runs-on: ubuntu-latest
-        name: publish
-        needs: [setup, download]
-        steps:
-            - name: download package
-              uses: actions/download-artifact@v2
-              with:
-                  name: package
+      - name: setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@tfso'
 
-            - name: setup
-              uses: actions/setup-node@v2
-              with:
-                  node-version: 14
-                  registry-url: 'https://npm.pkg.github.com'
-                  scope: '@tfso'
+      - name: check prerelease
+        if: needs.setup.outputs.prerelease == ''
+        run: |
+          echo "prerelease is not correct according to semantic versioning for prerelease tag; ie: v1.0.1-beta.1"
+          echo "version is currently ${{ needs.setup.outputs.version }}"
+          exit 1
+            
+      - name: extract package version
+        id: semver_package
+        uses: Saionaro/extract-package-version@v1.0.6
 
-            - name: check prerelease
-              if: needs.setup.outputs.prerelease == ''
-              run: |
-                  echo "prerelease is not correct according to semantic versioning for prerelease tag; ie: v1.0.1-beta.1"
-                  echo "version is currently ${{ needs.setup.outputs.version }}"
-                  exit 1
-            - name: extract package version
-              id: semver_package
-              uses: Saionaro/extract-package-version@v1.0.6
+      - name: extract npm tag
+        id: npmpublish
+        run: |
+          echo "${PRERELEASE}" | sed 's/[0-9]*\.[0-9]*\.[0-9]*\-\([^.+]*\).*/::set-output name=tag::\1/'
+        env:
+          PRERELEASE: ${{ steps.semver_package.outputs.version }}
 
-            - name: extract npm tag
-              id: npmpublish
-              run: |
-                  echo "${PRERELEASE}" | sed 's/[0-9]*\.[0-9]*\.[0-9]*\-\([^.+]*\).*/::set-output name=tag::\1/'
-              env:
-                  PRERELEASE: ${{ steps.semver_package.outputs.version }}
+      - name: compare package version with tag version
+        if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
+        run: |
+          echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
+          exit 1
 
-            - name: compare package version with tag version
-              if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
-              run: |
-                  echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
-                  exit 1
-
-            - name: publish prerelease version
-              run: |
-                  npm publish --tag ${{ steps.npmpublish.outputs.tag }}
-              env:
-                  NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: publish prerelease version
+        run: |
+          npm publish --tag ${{ steps.npmpublish.outputs.tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

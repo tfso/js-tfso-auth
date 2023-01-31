@@ -19,12 +19,6 @@ env:
   INITIAL_VERSION: 3.0.0
   DEFAULT_BUMP: patch
 
-  FILES: |
-    dist/
-    src/
-    package.json
-    package-lock.json
-    README.md
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,58 +34,22 @@ jobs:
         id: npm
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_GLOBAL_TOKEN: ${{ secrets.TFSO_REPO_READ }}
           NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
+          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
           INITIAL_VERSION: ${{ env.INITIAL_VERSION }}
           TRUNCATE_PRERELEASE: true
-          FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
-
-      - name: upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: artifact
-          path: ${{ env.FILES }}
-          retention-days: 7
-
-  upload:
-    if: needs.build.outputs.deploy == 'true' || github.event.inputs.deploy == 'true'
-    needs: build
-    runs-on: ubuntu-latest
-    name: upload package
-    steps:
-      - name: download workflow artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: artifact
-
-      - name: zip all matrix packages to a single package
-        run: |
-          zip -r artifact.zip .
-      - name: set vars
-        id: vars
-        run: |
-          echo "::set-output name=source::$( echo "./artifact.zip")"
-          echo "::set-output name=destination::$(echo "${{ format('s3://{0}/github-artifacts/tfso/{1}/{2}.zip', secrets.AWS_ARTIFACT_BUCKET, format('tfso-{0}', github.event.repository.name), needs.build.outputs.version) }}")"
-      - name: upload package to S3
-        run: |
-          aws s3 cp ${{ steps.vars.outputs.source }} ${{ steps.vars.outputs.destination }}
-        shell: bash
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ARTIFACT_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ARTIFACT_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'eu-west-1'
 
   tag:
     if: needs.build.outputs.deploy == 'true' || github.event.inputs.deploy == 'true'
-    needs: [build, upload]
+    needs: build
     runs-on: ubuntu-latest
     name: push tag
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: push tag
-        uses: anothrNick/github-tag-action@1.36.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.TFSO_REPO_TAG }}
+        uses: tfso/action-helpers/tag@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CUSTOM_TAG: ${{ needs.build.outputs.version }}
