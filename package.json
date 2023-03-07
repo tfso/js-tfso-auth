@@ -15,7 +15,7 @@
     "ably": "^1.1.22",
     "auth0-js": "^9.11.2",
     "eventemitter3": "^3.1.2",
-    "lodash": "^4.17.14"
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "conventional-changelog-conventionalcommits": "^4.6.0",
