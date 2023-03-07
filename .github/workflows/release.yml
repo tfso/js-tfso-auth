@@ -50,19 +50,55 @@ jobs:
           path: ${{ env.FILES }}
           retention-days: 7
 
+  publish-npm:
+    name: publish to npm
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: check npm
+        run: |
+            exit 1
 
-  publish:
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: package
+
+      - name: setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org/
+          scope: "@tfso"
+
+      - name: extract package version
+        id: semver_package
+        uses: Saionaro/extract-package-version@v1.0.6
+
+      - name: compare package version with tag version
+        if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
+        run: |
+          echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
+          exit 1
+
+      - name: publish
+        run: |
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-github:
     runs-on: ubuntu-latest
     name: publish
     needs: [setup, build]
     steps:
       - name: download package
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: package
 
       - name: setup
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: 16
           registry-url: 'https://npm.pkg.github.com'
@@ -80,7 +116,7 @@ jobs:
 
       - name: publish version
         run: |
-          npm publish
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

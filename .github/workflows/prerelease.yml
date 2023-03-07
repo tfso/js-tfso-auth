@@ -50,6 +50,39 @@ jobs:
           path: ${{ env.FILES }}
           retention-days: 7
 
+  publish-npm:
+    runs-on: ubuntu-latest
+    name: publish to npm
+    needs: [setup, build]
+    steps:
+      - name: download package
+        uses: actions/download-artifact@v3
+        with:
+          name: package
+
+      - name: setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.org/
+          scope: '@tfso'
+
+      - name: extract package version
+        id: semver_package
+        uses: Saionaro/extract-package-version@v1.0.6
+
+      - name: compare package version with tag version
+        if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
+        run: |
+          echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
+          exit 1
+
+      - name: publish prerelease version
+        run: |
+          npm publish --access public --tag ${{ steps.npmpublish.outputs.tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   publish:
     runs-on: ubuntu-latest
     name: publish
@@ -67,23 +100,15 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@tfso'
 
-      - name: check prerelease
-        if: needs.setup.outputs.prerelease == ''
-        run: |
-          echo "prerelease is not correct according to semantic versioning for prerelease tag; ie: v1.0.1-beta.1"
-          echo "version is currently ${{ needs.setup.outputs.version }}"
-          exit 1
-            
       - name: extract package version
         id: semver_package
         uses: Saionaro/extract-package-version@v1.0.6
 
-      - name: extract npm tag
-        id: npmpublish
+      - name: compare package version with tag version
+        if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
         run: |
-          echo "${PRERELEASE}" | sed 's/[0-9]*\.[0-9]*\.[0-9]*\-\([^.+]*\).*/::set-output name=tag::\1/'
-        env:
-          PRERELEASE: ${{ steps.semver_package.outputs.version }}
+          echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
+          exit 1
 
       - name: compare package version with tag version
         if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
@@ -93,6 +118,6 @@ jobs:
 
       - name: publish prerelease version
         run: |
-          npm publish --tag ${{ steps.npmpublish.outputs.tag }}
+          npm publish  --access public --tag ${{ steps.npmpublish.outputs.tag }}
         env:
           NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
