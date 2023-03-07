@@ -55,10 +55,6 @@ jobs:
     needs: [setup, build]
     runs-on: ubuntu-latest
     steps:
-      - name: check npm
-        run: |
-            exit 1
-
       - name: download artifact
         uses: actions/download-artifact@v3
         with:
