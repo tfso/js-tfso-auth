@@ -77,6 +77,13 @@ jobs:
           echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
           exit 1
 
+      - name: extract npm tag
+        id: npmpublish
+        run: |
+          echo "tag=$(echo "${PRERELEASE}" | sed 's/v\?[0-9]*\.[0-9]*\.[0-9]*\-\([^.+]*\).*/\1/')" >> $GITHUB_OUTPUT
+        env:
+          PRERELEASE: ${{ steps.semver_package.outputs.version }}          
+
       - name: publish prerelease version
         run: |
           npm publish --access public --tag ${{ steps.npmpublish.outputs.tag }}
@@ -110,11 +117,12 @@ jobs:
           echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
           exit 1
 
-      - name: compare package version with tag version
-        if: format('v{0}', steps.semver_package.outputs.version) != needs.setup.outputs.version
+      - name: extract npm tag
+        id: npmpublish
         run: |
-          echo "version from package v${{ steps.semver_package.outputs.version }} is not matching tag version ${{ needs.setup.outputs.version }}"
-          exit 1
+          echo "tag=$(echo "${PRERELEASE}" | sed 's/v\?[0-9]*\.[0-9]*\.[0-9]*\-\([^.+]*\).*/\1/')" >> $GITHUB_OUTPUT
+        env:
+          PRERELEASE: ${{ steps.semver_package.outputs.version }}
 
       - name: publish prerelease version
         run: |
