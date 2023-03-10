@@ -15,6 +15,8 @@ export class Authenticator{
     async getCurrentlyLoggedInIdentityOrNull(){
         try {
             const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+            console.log('token')
+            console.log(token)
             if(!token){
                 return null
             }
