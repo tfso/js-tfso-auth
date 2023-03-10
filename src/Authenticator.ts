@@ -34,6 +34,9 @@ export class Authenticator{
 
     async ensureLoggedIn(){
         const identity = await this.getCurrentlyLoggedInIdentityOrNull()
+        debugger;
+        console.log('ensureLoggedIn')
+        console.log(identity)
         if(!identity){
             this.redirectToLogin()
             return
