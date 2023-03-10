@@ -15,8 +15,6 @@ export class Authenticator{
     async getCurrentlyLoggedInIdentityOrNull(){
         try {
             const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
-            console.log('token')
-            console.log(token)
             if(!token){
                 return null
             }
@@ -43,8 +41,6 @@ export class Authenticator{
 
     async ensureLoggedIn(){
         const identity = await this.getCurrentlyLoggedInIdentityOrNull()
-        console.log('ensureLoggedIn')
-        console.log(identity)
         if(!identity){
             this.redirectToLogin()
             return null
@@ -119,12 +115,7 @@ export class Authenticator{
         }
 
         try{
-            console.log('_getIdentityApiTokenOrNulIfAuthRequired')
-            console.log(opts)
-            const token = await this._webAuth.checkSession(opts)
-            console.log(token)
-
-            return token
+            return await this._webAuth.checkSession(opts)
         }catch(error){
             const errorsWhereAuthIsRequired = [
                 'login_required',
