@@ -74,6 +74,12 @@ export class AuthManager extends EventEmitter<Events>{
         this.emit('authentication-attempt')
         try{
             const identity: Identity = await this._authenticator.ensureLoggedIn()
+
+            if(identity === null) {
+                // no identity, we are waiting for a redirect to happen
+                return
+            }
+
             this.identity = identity // Set before emitting so it's available when consumer is reacting to the event
             if(this._config.requireValidProfile){
                 this.requireValidProfile(identity)
@@ -97,7 +103,7 @@ export class AuthManager extends EventEmitter<Events>{
 
     requireValidProfile(identity: Identity){
         if(!userHasAllRequiredProfileInfo(identity)){
-            document.location.href = 'https://app.24sevenoffice.com/modules/profile2/#profile'
+            document.location.href = '/modules/profile2/#profile'
         }
     }
 
