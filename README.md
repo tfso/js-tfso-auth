@@ -1,6 +1,6 @@
 # js-auth
 
-## Config
+## config
 
 The config object looks like this:
 

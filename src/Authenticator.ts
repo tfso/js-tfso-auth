@@ -13,30 +13,37 @@ export class Authenticator{
     }
 
     async getCurrentlyLoggedInIdentityOrNull(){
-        const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
-        if(!token){
+        try {
+            const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+            if(!token){
+                return null
+            }
+
+            let identity = await this._getIdentityOrNullIfCookieRequired()
+
+            if(!identity){
+                await this._setLegacyCookieIfPossible(token)
+                identity = await this._getIdentityOrNullIfCookieRequired()
+            }
+
+            if(!identity){
+                return null
+            }
+
+            return identity
+        }
+        catch(err) {
+            console.error(err)
+
             return null
         }
-
-        let identity = await this._getIdentityOrNullIfCookieRequired()
-
-        if(!identity){
-            await this._setLegacyCookieIfPossible(token)
-            identity = await this._getIdentityOrNullIfCookieRequired()
-        }
-
-        if(!identity){
-            return null
-        }
-
-        return identity
     }
 
     async ensureLoggedIn(){
         const identity = await this.getCurrentlyLoggedInIdentityOrNull()
         if(!identity){
             this.redirectToLogin()
-            return
+            return null
         }
 
         return identity
