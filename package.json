@@ -12,7 +12,7 @@
     "test": "echo no tests!"
   },
   "dependencies": {
-    "ably": "^1.1.22",
+    "ably": "^1.2.41",
     "auth0-js": "^9.11.2",
     "eventemitter3": "^3.1.2",
     "lodash": "^4.17.14"
