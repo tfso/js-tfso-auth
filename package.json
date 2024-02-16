@@ -12,8 +12,8 @@
     "test": "echo no tests!"
   },
   "dependencies": {
-    "ably": "^1.1.22",
-    "auth0-js": "^9.11.2",
+    "ably": "^1.2.49",
+    "auth0-js": "^9.24.1",
     "eventemitter3": "^3.1.2",
     "lodash": "^4.17.14"
   },
@@ -22,7 +22,7 @@
     "@rollup/plugin-commonjs": "^11.0.0",
     "@rollup/plugin-node-resolve": "6.0.0",
     "@rollup/plugin-typescript": "^2.0.2",
-    "@types/auth0-js": "9.10.6",
+    "@types/auth0-js": "9.21.5",
     "@types/lodash": "^4.14.136",
     "cross-env": "^6.0.3",
     "rollup": "1.27.14",
