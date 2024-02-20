@@ -146,7 +146,9 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     _handleLicenseChanged(newIdentity: Identity){
-        const event = {newIdentity, prevIdentity: this.identity}
+        const event = {newIdentity, prevIdentity: this.identity }
+
+        this.identity = newIdentity
 
         this.emit('authentication-licensechange', event)
 
