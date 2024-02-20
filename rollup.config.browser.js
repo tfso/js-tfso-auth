@@ -18,7 +18,7 @@ export default {
     plugins: [
         resolve({browser: true}),
         commonjs({
-            namedExports: {'node_modules/ably/browser/static/ably-commonjs.js': ['Realtime']}
+            namedExports: {'node_modules/ably/build/ably-commonjs.js': ['Realtime']}
         }),
         typescript({
             tsconfig: 'tsconfig-browser.json'
