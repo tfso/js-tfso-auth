@@ -132,20 +132,18 @@ export class Authenticator{
         }
     }
 
-    async changeActiveLicense(license: types.License){
-        const data = {
-            ClientId: license.clientId,
-            UserId: license.userId
-        }
+    async changeActiveLicense(license: string){
 
-        return await Promise.all([this._changePassportMap(data), this._removeIdentity()])
-            .then(() => {
-                return license
-            })
-            .catch((err) => {
-                const error: any = new Error(err)
-                throw error
-            })
+        const { clientId: ClientId, userId: UserId } = parseLicense(license)
+
+        try {
+            await this._changePassportMap({ ClientId, UserId })
+            await this._removeIdentity()
+            return license
+        } catch (err) {
+            const error: any = new Error(err)
+            throw error
+        }
     }
 
     async _changePassportMap(data: { ClientId: number; UserId: number }){
@@ -168,6 +166,10 @@ export class Authenticator{
         )
     }
 
+}
+
+const parseLicense = (licenseString: string): Pick<types.License, 'clientId' | 'identityId' | 'userId'> => {
+    return Object.fromEntries(licenseString.split(';').map(section => section.split(':')))
 }
 
 const cacheBustUrl = url => {

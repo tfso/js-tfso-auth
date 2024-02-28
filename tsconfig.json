@@ -3,7 +3,7 @@
     "outDir": "dist",
     "module": "ESNext",
     "target": "ES6",
-    "lib": ["ES2018", "DOM"],
+    "lib": ["ES2019", "DOM"],
     "sourceMap": true,
     "allowJs": false,
     "jsx": "react",

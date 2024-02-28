@@ -97,9 +97,9 @@ export class AuthManager extends EventEmitter<Events>{
         this.emit('authorization-complete')
     }
 
-    async changeActiveLicense(newLicense: License){
+    async changeActiveLicense(newLicense: string){
         await this._authenticator.changeActiveLicense(newLicense)
-        this._handleAuthChange()
+        await this._handleAuthChange()
     }
 
     hasValidProfile(identity: Identity){
