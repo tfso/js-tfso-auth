@@ -3,7 +3,7 @@ import {Authenticator} from './Authenticator'
 import {Authorizer} from './Authorizer'
 import {AuthChangeNotifier} from './AuthChangeNotifier'
 import defaultsDeep from 'lodash/defaultsDeep'
-import {AccessFailure, AccessSuccess, AuthManagerConfig, Identity, License, TokenConfig} from './types'
+import {AccessFailure, AccessSuccess, AuthManagerConfig, Identity, TokenConfig} from './types'
 
 type Events =
     'authentication-attempt' |
