@@ -142,7 +142,7 @@ export type Identity = {
     }
 }
 
-export type License = {
+type LicenseApiModel = {
     id: string
     name: string
     isDefault: boolean
@@ -152,3 +152,5 @@ export type License = {
     modified: string
     created: string
 }
+
+export type License = Omit<LicenseApiModel, 'created' | 'modified'>
