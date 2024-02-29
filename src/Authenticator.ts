@@ -134,7 +134,7 @@ export class Authenticator{
 
     async changeActiveLicense(license: string){
 
-        const [_, ClientId, UserId] = license.split(';')
+        const [, ClientId, UserId] = license.split(';')
 
         try {
             await this._changePassportMap({ ClientId, UserId })
