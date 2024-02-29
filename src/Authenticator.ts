@@ -133,7 +133,6 @@ export class Authenticator{
     }
 
     async changeActiveLicense(license: string){
-
         const [, ClientId, UserId] = license.split(';')
 
         try {
