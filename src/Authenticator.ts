@@ -134,7 +134,7 @@ export class Authenticator{
 
     async changeActiveLicense(license: string){
 
-        const { clientId: ClientId, userId: UserId } = parseLicense(license)
+        const [_, ClientId, UserId] = license.split(';')
 
         try {
             await this._changePassportMap({ ClientId, UserId })
@@ -146,7 +146,7 @@ export class Authenticator{
         }
     }
 
-    async _changePassportMap(data: { ClientId: number; UserId: number }){
+    async _changePassportMap(data: { ClientId: string; UserId: string }){
         return await fetch('/login/data/ChangePassportMap.aspx', {
             method: 'POST',
             credentials: 'include',
@@ -167,11 +167,6 @@ export class Authenticator{
     }
 
 }
-
-const parseLicense = (licenseString: string): Pick<types.License, 'clientId' | 'identityId' | 'userId'> => {
-    return Object.fromEntries(licenseString.split(';').map(section => section.split(':')))
-}
-
 const cacheBustUrl = url => {
     url = new URL(url, window.location.origin)
     url.searchParams.set('_dc', Date.now())
