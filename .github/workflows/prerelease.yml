@@ -6,6 +6,7 @@ on:
             - 'v[0-9]+\.[0-9]+\.[0-9]+-*' # only preleases, eg v1.0.1-beta.1
 
 env:
+  NODE_VERSION: 20
   FILES: |
     dist/
     src/
@@ -41,6 +42,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TFSO_TOKEN }}
           FONT_AWESOME_TOKEN: ${{ secrets.FONT_AWESOME_TOKEN }}
+          NODE_VERSION: ${{ env.NODE_VERSION }}
           CUSTOM_TAG: ${{ needs.setup.outputs.version }}
 
       - name: upload package
