@@ -141,3 +141,12 @@ export type Identity = {
         baseSymbol: null | string
     }
 }
+
+export type License = {
+    id: string
+    name: string
+    isDefault: boolean
+    clientId: number
+    identityId: string
+    userId: number
+}

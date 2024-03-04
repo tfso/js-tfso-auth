@@ -131,10 +131,50 @@ export class Authenticator{
             throw error
         }
     }
-}
 
+    async changeActiveLicense(license: string){
+        const [, ClientId, UserId] = license.split(';')
+
+        try {
+            await this._changePassportMap({ ClientId, UserId })
+            await this._removeIdentity()
+            return license
+        } catch (err) {
+            throw err
+        }
+    }
+
+    async _changePassportMap(data: { ClientId: string; UserId: string }){
+        return await fetch('/login/data/ChangePassportMap.aspx', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: mapToWWWEncoded(data)
+        })
+    }
+
+    async _removeIdentity() {
+        return await fetch('/script/system/session/removeidentity.asp',
+            {
+                method: 'GET',
+                credentials: 'include'
+            }
+        )
+    }
+
+}
 const cacheBustUrl = url => {
     url = new URL(url, window.location.origin)
     url.searchParams.set('_dc', Date.now())
     return url.toString()
+}
+
+const mapToWWWEncoded = (
+    data: Record<string, string | number>
+): string => {
+    return Object.entries(data)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&')
 }
