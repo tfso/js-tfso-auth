@@ -140,8 +140,7 @@ export class Authenticator{
             await this._removeIdentity()
             return license
         } catch (err) {
-            const error: any = new Error(err)
-            throw error
+            throw err
         }
     }
 
