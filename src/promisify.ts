@@ -1,8 +1,8 @@
-export default (fn: any) => {
+export default <R = any>(fn: Function) => {
     return (...args: any[]) => {
-        return new Promise((resolve, reject) => {
+        return new Promise<R>((resolve, reject) => {
             try{
-                fn(...args, (err:any, result:any) => {
+                fn(...args, (err: any, result: any) => {
                     if(err) return reject(err)
                     return resolve(result)
                 })

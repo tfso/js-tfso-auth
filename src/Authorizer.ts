@@ -1,15 +1,15 @@
-import * as types from './types'
+import { WebAuth } from 'auth0-js'
+
 import EventEmitter from 'eventemitter3'
-import createWebAuth from './createWebAuth'
-import defaultsDeep from 'lodash/defaultsDeep'
+import * as types from './types'
 import defaultConfig from './defaultConfig'
 import {AccessFailure, AccessSuccess, TokenConfig} from './types'
+import promisify from './promisify'
 
 type Events = 'access-success' | 'access-failure'
 
 export class Authorizer extends EventEmitter<Events>{
     _config: types.AuthorizerConfig
-    _webAuth: types.WebAuthPromisified
     _checkSessionCount = 0
     _accesses: {
         [key: string]: types.AccessSuccess | types.AccessFailure
@@ -18,10 +18,10 @@ export class Authorizer extends EventEmitter<Events>{
         [key: string]: boolean
     } = {}
 
-    constructor(config: Partial<types.AuthorizerConfig>){
+    constructor(config: Partial<types.AuthorizerConfig>, private _webAuth: WebAuth){
         super()
-        this._config = defaultsDeep({}, config, defaultConfig)
-        this._webAuth = createWebAuth(this._config.optionsAuth0)
+
+        this._config = { ...defaultConfig, ...config ?? {} }
     }
 
     /**
@@ -61,19 +61,19 @@ export class Authorizer extends EventEmitter<Events>{
         return this._accessesToRefresh[this._accessKey(key, license)]
     }
 
-    _accessKey(tokenKey: string, license: string){
+    private _accessKey(tokenKey: string, license: string){
         return `${tokenKey}-${license}`
     }
 
-    _setAccess(access: AccessSuccess | AccessFailure){
+    private _setAccess(access: AccessSuccess | AccessFailure){
         this._accesses[this._accessKey(access.tokenConfig.key, access.license)] = access
     }
 
-    _setRefresh(key: string, license: string){
+    private _setRefresh(key: string, license: string){
         this._accessesToRefresh[this._accessKey(key, license)] = true
     }
 
-    _keepTokenFresh(tokenConfig: TokenConfig, license: string){
+    private _keepTokenFresh(tokenConfig: TokenConfig, license: string){
         if(this.isRefreshing(tokenConfig.key, license)){
             return
         }
@@ -95,7 +95,7 @@ export class Authorizer extends EventEmitter<Events>{
         waitAndRefreshAgain()
     }
 
-    async _refreshToken(tokenConfig: TokenConfig, license: string){
+    private async _refreshToken(tokenConfig: TokenConfig, license: string){
         const result = await this._checkSession(tokenConfig, license)
         if(result.error){
             this._onTokenFailure(<types.TokenError>result)
@@ -104,7 +104,7 @@ export class Authorizer extends EventEmitter<Events>{
         }
     }
 
-    _onTokenSuccess({tokenConfig, token, license, expiresAt}: types.TokenSuccess){
+    private _onTokenSuccess({tokenConfig, token, license, expiresAt}: types.TokenSuccess){
         const access: AccessSuccess = {
             type: 'success',
             tokenConfig,
@@ -119,7 +119,7 @@ export class Authorizer extends EventEmitter<Events>{
         this.emit('access-success', access)
     }
 
-    _onTokenFailure({tokenConfig, error, license}: types.TokenError){
+    private _onTokenFailure({tokenConfig, error, license}: types.TokenError){
         const errorsWhereAuthIsRequired = [
             'login_required',
             'consent_required',
@@ -141,7 +141,7 @@ export class Authorizer extends EventEmitter<Events>{
         this.emit('access-failure', access)
     }
 
-    async _checkSession(tokenConfig: TokenConfig, license: string): Promise<types.TokenResult>{
+    private async _checkSession(tokenConfig: TokenConfig, license: string): Promise<types.TokenResult>{
         const [identityId, clientId, userId] = license.split(';')
 
         // NB: We add a serial number to keep each state unique. checkSession needs this when called several times in parallel
@@ -153,8 +153,10 @@ export class Authorizer extends EventEmitter<Events>{
             redirectUri: this._config.callbackUrl
         }
 
+        const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))
+
         try{
-            const token = await this._webAuth.checkSession(opts)
+            const token = await checkSession(opts)
             const expiresAt = token.expiresIn !== undefined ? token.expiresIn + Date.now() : null
             return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
         }catch(error){

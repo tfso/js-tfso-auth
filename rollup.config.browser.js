@@ -1,4 +1,4 @@
-import path from 'path'
+import path from 'node:path'
 
 import commonjs from '@rollup/plugin-commonjs'
 import resolve from '@rollup/plugin-node-resolve'
@@ -17,11 +17,10 @@ export default {
     ],
     plugins: [
         resolve({browser: true}),
-        commonjs({
-            namedExports: {'node_modules/ably/build/ably-commonjs.js': ['Realtime']}
-        }),
+        commonjs(),
         typescript({
-            tsconfig: 'tsconfig-browser.json'
+            sourceMap: true,
+            tsconfig: 'tsconfig-browser.json',
         })
     ]
 }
