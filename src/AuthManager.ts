@@ -37,10 +37,10 @@ export class AuthManager extends EventEmitter<Events>{
         this._authorizer = authorizer
         this._authChangeNotifier = new AuthChangeNotifier(authenticator)
 
-        this._config = { ...config, ...{
+        this._config = { ...{
             tokens: [],
             requireValidProfile: true
-        }}
+        }, ...config }
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
         this._authorizer.on('access-failure', access => this._handleAuthorizationFailure(access))
