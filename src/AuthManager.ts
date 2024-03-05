@@ -76,7 +76,8 @@ export class AuthManager extends EventEmitter<Events>{
 
             if(identity === null) {
                 this._authenticator.login()
-                return
+
+                return false
             }
 
             this.identity = identity // Set before emitting so it's available when consumer is reacting to the event
@@ -88,12 +89,15 @@ export class AuthManager extends EventEmitter<Events>{
         }catch(err){
             this.identity = null
             this.emit('authentication-failure', {err})
-            return
+            
+            return false
         }
 
         this.emit('authorization-start')
         await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
         this.emit('authorization-complete')
+
+        return true
     }
 
     async changeActiveLicense(newLicense: string){
@@ -106,7 +110,7 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     requireValidProfile(identity: Identity){
-        if(!userHasAllRequiredProfileInfo(identity)){
+        if(!this.hasValidProfile(identity)){
             document.location.href = '/modules/profile2/#profile'
         }
     }
@@ -115,8 +119,8 @@ export class AuthManager extends EventEmitter<Events>{
         return this._authenticator.logout(returnUrl)
     }
 
-    async verifyCallback(){
-        return this._authenticator.verifyCallback()
+    async callback(){
+        return this._authenticator.callback()
     }
 
     authorize(tokenConfig: TokenConfig, license: string){

@@ -1,4 +1,4 @@
-import { WebAuth } from 'auth0-js'
+import { Auth0DecodedHash, WebAuth } from 'auth0-js'
 
 import * as types from './types'
 import defaultConfig from './defaultConfig'
@@ -70,20 +70,18 @@ export class Authenticator{
         })
     }
 
-    async verifyCallback() {
+    /**
+     * Verify callback from login provider
+     * @returns The token if the user is logged in, otherwise null
+     * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
+     */
+    async callback(): Promise<Auth0DecodedHash | null> {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
-        try {
-            const token = await parseHarsh()
+        const token = await parseHarsh()
 
-            await this._setLegacyCookieIfPossible(token)
+        await this._setLegacyCookieIfPossible(token)
 
-            return true
-        }
-        catch(err) {
-            console.error(err)
-            
-            return false
-        }
+        return token
     }
 
     redirectToLogin(){
