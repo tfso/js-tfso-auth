@@ -50,10 +50,18 @@ export class Authenticator{
     }
 
     login() {
+        const redirectUrl = new URL(this._config.callbackUrl ?? `/modules/auth/login-callback`, window.location.origin)
+
+        if(window.location.search){
+            for(let [key, value] of new URLSearchParams(window.location.search)){
+                redirectUrl.searchParams.append(key, value)
+            }
+        }
+
         this._webAuth.authorize({
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: `${this._config.callbackUrl ?? `/modules/auth/login-callback`}${window.location.search}`
+            redirectUri: redirectUrl.toString()
         })
     }
 
