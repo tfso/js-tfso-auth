@@ -154,7 +154,7 @@ export class Authenticator{
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: this._config.callbackUrl
+            redirectUri: `${window.location.origin}/modules/auth/login-callback`
         }
 
         try{
