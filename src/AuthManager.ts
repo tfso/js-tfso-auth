@@ -116,6 +116,8 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
+        this._handleLoggedOut()
+        
         return this._authenticator.logout(returnUrl)
     }
 
