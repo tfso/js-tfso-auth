@@ -2,7 +2,6 @@ import EventEmitter from 'eventemitter3'
 import {Authenticator} from './Authenticator'
 import {Authorizer} from './Authorizer'
 import {AuthChangeNotifier} from './AuthChangeNotifier'
-import defaultsDeep from 'lodash/defaultsDeep'
 import {AccessFailure, AccessSuccess, AuthManagerConfig, Identity, TokenConfig} from './types'
 
 type Events =
@@ -38,10 +37,10 @@ export class AuthManager extends EventEmitter<Events>{
         this._authorizer = authorizer
         this._authChangeNotifier = new AuthChangeNotifier(authenticator)
 
-        this._config = defaultsDeep({}, config, {
+        this._config = { ...{
             tokens: [],
             requireValidProfile: true
-        })
+        }, ...config }
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
         this._authorizer.on('access-failure', access => this._handleAuthorizationFailure(access))
@@ -73,11 +72,12 @@ export class AuthManager extends EventEmitter<Events>{
     async login(){
         this.emit('authentication-attempt')
         try{
-            const identity: Identity = await this._authenticator.ensureLoggedIn()
+            const identity: Identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
             if(identity === null) {
-                // no identity, we are waiting for a redirect to happen
-                return
+                this._authenticator.login()
+
+                return false
             }
 
             this.identity = identity // Set before emitting so it's available when consumer is reacting to the event
@@ -89,12 +89,15 @@ export class AuthManager extends EventEmitter<Events>{
         }catch(err){
             this.identity = null
             this.emit('authentication-failure', {err})
-            return
+            
+            return false
         }
 
         this.emit('authorization-start')
         await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
         this.emit('authorization-complete')
+
+        return true
     }
 
     async changeActiveLicense(newLicense: string){
@@ -107,13 +110,19 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     requireValidProfile(identity: Identity){
-        if(!userHasAllRequiredProfileInfo(identity)){
+        if(!this.hasValidProfile(identity)){
             document.location.href = '/modules/profile2/#profile'
         }
     }
 
-    logout(){
-        this._authenticator.redirectToLogout()
+    async logout(returnUrl?: string){
+        this._handleLoggedOut()
+        
+        return this._authenticator.logout(returnUrl)
+    }
+
+    async callback(){
+        return this._authenticator.callback()
     }
 
     authorize(tokenConfig: TokenConfig, license: string){
@@ -138,10 +147,10 @@ export class AuthManager extends EventEmitter<Events>{
         return this._config.tokens
     }
 
-    _handleLoggedOut(){
+    private _handleLoggedOut(){
         this.emit('authentication-logout')
 
-        const defaultHandler = () => this._authenticator.redirectToLogin()
+        const defaultHandler = () => this._authenticator.login()
 
         if(this._config.logoutHandler){
             this._config.logoutHandler(defaultHandler)
@@ -150,14 +159,14 @@ export class AuthManager extends EventEmitter<Events>{
         }
     }
 
-    _handleLicenseChanged(newIdentity: Identity){
+    private _handleLicenseChanged(newIdentity: Identity){
         const event = {newIdentity, prevIdentity: this.identity }
 
         this.identity = newIdentity
 
         this.emit('authentication-licensechange', event)
 
-        const defaultHandler = () => window.location.reload(true)
+        const defaultHandler = () => window.location.reload()
 
         if(this._config.licenseChangeHandler){
             this._config.licenseChangeHandler(event, defaultHandler)
@@ -166,15 +175,15 @@ export class AuthManager extends EventEmitter<Events>{
         }
     }
 
-    _handleAuthorizationSuccess(access: AccessSuccess){
+    private _handleAuthorizationSuccess(access: AccessSuccess){
         this.emit('authorization-success', {access})
     }
 
-    _handleAuthorizationFailure(access: AccessFailure){
+    private _handleAuthorizationFailure(access: AccessFailure){
         this.emit('authorization-failure', {access})
     }
 
-    async _handleAuthChange(){
+    private async _handleAuthChange(){
         const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
         if(!identity){
             return this._handleLoggedOut()

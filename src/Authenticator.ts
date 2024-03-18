@@ -1,18 +1,18 @@
+import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+
 import * as types from './types'
-import createWebAuth from './createWebAuth'
-import defaultsDeep from 'lodash/defaultsDeep'
 import defaultConfig from './defaultConfig'
+import promisify from './promisify'
 
 export class Authenticator{
-    _config: types.AuthenticatorConfig
-    _webAuth: types.WebAuthPromisified
+    private _config: types.AuthenticatorConfig
+    private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
 
-    constructor(config: Partial<types.AuthenticatorConfig>){
-        this._config = defaultsDeep({}, config, defaultConfig)
-        this._webAuth = createWebAuth(this._config.optionsAuth0)
+    constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
+        this._config = { ...defaultConfig, ...config ?? {} }
     }
 
-    async getCurrentlyLoggedInIdentityOrNull(){
+    async getCurrentlyLoggedInIdentityOrNull() {
         try {
             const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
             if(!token){
@@ -49,6 +49,49 @@ export class Authenticator{
         return identity
     }
 
+    login() {
+        const redirectUrl = new URL(this._config.callbackUrl ?? `/modules/auth/login-callback`, window.location.origin)
+
+        if(window.location.search){
+            for(let [key, value] of new URLSearchParams(window.location.search)){
+                redirectUrl.searchParams.append(key, value)
+            }
+        }
+
+        this._webAuth.authorize({
+            audience: 'https://app.24sevenoffice.com',
+            responseType: 'token',
+            redirectUri: redirectUrl.toString()
+        })
+    }
+
+    async logout(returnUrl?: string) {
+        const returnTo = returnUrl ?? `${this._baseUrl}/login`
+
+        await Promise.all([
+            fetch(`${this._baseUrl}/script/client/login/logoff.asp?_dc=${Date.now()}`, { credentials: 'same-origin' }),
+            fetch(`${this._baseUrl}/login/data/Logout.aspx`, { method: 'POST', credentials: 'same-origin' })
+        ])
+
+        this._webAuth.logout({ 
+            returnTo
+        })
+    }
+
+    /**
+     * Verify callback from login provider
+     * @returns The token if the user is logged in, otherwise null
+     * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
+     */
+    async callback(): Promise<Auth0DecodedHash | null> {
+        const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
+        const token = await parseHarsh()
+
+        await this._setLegacyCookieIfPossible(token)
+
+        return token
+    }
+
     redirectToLogin(){
         window.location.href = typeof this._config.loginUrl === 'function'
             ? this._config.loginUrl()
@@ -61,7 +104,7 @@ export class Authenticator{
             : this._config.logoutUrl
     }
 
-    async _getIdentityOrNullIfCookieRequired(){
+    private async _getIdentityOrNullIfCookieRequired(){
         const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
@@ -88,7 +131,7 @@ export class Authenticator{
         return res.json()
     }
 
-    async _setLegacyCookieIfPossible(token: types.Auth0Token){
+    private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
@@ -102,7 +145,7 @@ export class Authenticator{
         }
     }
 
-    async _getIdentityApiTokenOrNulIfAuthRequired(){
+    private async _getIdentityApiTokenOrNulIfAuthRequired(){
         /*
         In the future this should be a token for the identity api,
         but since the identity api only supports cookie
@@ -111,11 +154,13 @@ export class Authenticator{
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: this._config.callbackUrl
+            redirectUri: `${window.location.origin}/modules/auth/login-callback`
         }
 
         try{
-            return await this._webAuth.checkSession(opts)
+            const checkSession = promisify(this._webAuth.checkSession.bind(this._webAuth))
+
+            return await checkSession(opts)
         }catch(error){
             const errorsWhereAuthIsRequired = [
                 'login_required',
@@ -144,7 +189,7 @@ export class Authenticator{
         }
     }
 
-    async _changePassportMap(data: { ClientId: string; UserId: string }){
+    private async _changePassportMap(data: { ClientId: string; UserId: string }){
         return await fetch('/login/data/ChangePassportMap.aspx', {
             method: 'POST',
             credentials: 'include',
@@ -155,7 +200,7 @@ export class Authenticator{
         })
     }
 
-    async _removeIdentity() {
+    private async _removeIdentity() {
         return await fetch('/script/system/session/removeidentity.asp',
             {
                 method: 'GET',
