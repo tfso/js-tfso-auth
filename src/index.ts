@@ -13,7 +13,7 @@ export {AuthChangeNotifier} from './AuthChangeNotifier'
 export {AuthManager} from './AuthManager'
 
 export const createAuthManager = (authManagerConfig: Partial<AuthManagerConfig>, authenticatorConfig: Partial<AuthenticatorConfig>) => {
-    const webAuth = new WebAuth(authenticatorConfig.optionsAuth0 ?? defaultConfig.optionsAuth0 )
+    const webAuth = new WebAuth({ ...defaultConfig.optionsAuth0, ...authenticatorConfig.optionsAuth0 ?? {} })
 
     const authenticator = new Authenticator(authenticatorConfig, webAuth)
     const authorizer = new Authorizer(authenticatorConfig, webAuth)

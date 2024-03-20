@@ -150,7 +150,7 @@ export class Authorizer extends EventEmitter<Events>{
             scope: tokenConfig.scopes.join(' '),
             state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
             responseType: 'token',
-            redirectUri: `${window.location.origin}/modules/auth/login-callback`
+            redirectUri: this._config.sessionCallbackUrl
         }
 
         const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))

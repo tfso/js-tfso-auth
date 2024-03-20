@@ -33,7 +33,7 @@ export class Authenticator{
             return identity
         }
         catch(err) {
-            console.error(err)
+            console.error('Not logged in', err)
 
             return null
         }
@@ -154,7 +154,7 @@ export class Authenticator{
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: `${window.location.origin}/modules/auth/login-callback`
+            redirectUri: this._config.sessionCallbackUrl
         }
 
         try{
