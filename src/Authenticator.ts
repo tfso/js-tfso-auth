@@ -4,6 +4,11 @@ import * as types from './types'
 import defaultConfig from './defaultConfig'
 import promisify from './promisify'
 
+class HttpError extends Error {
+    constructor(public status: number, public statusText: string, public headers?: Response["headers"], public body?: Record<string, any>) {
+        super(`${status} ${statusText}`)
+    }
+}
 export class Authenticator{
     private _config: types.AuthenticatorConfig
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
@@ -191,7 +196,7 @@ export class Authenticator{
     }
 
     private async _changePassportMap(data: { ClientId: string; UserId: string }){
-        return await fetch('/login/data/ChangePassportMap.aspx', {
+        const res = await fetch('/login/data/ChangePassportMap.aspx', {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -199,6 +204,10 @@ export class Authenticator{
             },
             body: mapToWWWEncoded(data)
         })
+        if(!res.ok) {
+            throw new HttpError(res.status, res.statusText, res.headers)
+        }
+        return res
     }
 
     private async _removeIdentity() {
