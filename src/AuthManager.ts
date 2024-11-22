@@ -5,6 +5,7 @@ import {AuthChangeNotifier} from './AuthChangeNotifier'
 import {AccessFailure, AccessSuccess, AuthManagerConfig, Identity, TokenConfig} from './types'
 
 type Events =
+    'authentication-debug' |
     'authentication-attempt' |
     'authentication-success' |
     'authentication-failure' |
@@ -44,6 +45,7 @@ export class AuthManager extends EventEmitter<Events>{
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
         this._authorizer.on('access-failure', access => this._handleAuthorizationFailure(access))
+        this._authenticator.on('debug', (message, err) => this.emit('authentication-debug', message, err))
 
         this._authChangeNotifier.on('login', () => this._handleAuthChange())
         this._authChangeNotifier.on('change', () => this._handleAuthChange())
@@ -54,6 +56,7 @@ export class AuthManager extends EventEmitter<Events>{
     /*
     Override .on to get better typescript help
      */
+    on(event: 'authentication-debug', fn: (message: string, err: Error) => void, context?: any): this
     on(event: 'authentication-attempt', fn: () => void, context?: any): this
     on(event: 'authentication-success', fn: (event: {identity: Identity}) => void, context?: any): this
     on(event: 'authentication-failure', fn: (event: {err: Error}) => void, context?: any): this

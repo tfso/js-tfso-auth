@@ -1,38 +1,49 @@
 import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+import EventEmitter from 'eventemitter3'
 
 import * as types from './types'
 import defaultConfig from './defaultConfig'
 import promisify from './promisify'
 
-export class Authenticator{
+type Events = 'debug'
+
+export class Authenticator extends EventEmitter<Events> {
     private _config: types.AuthenticatorConfig
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
 
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
+        super()
+
         this._config = { ...defaultConfig, ...config ?? {} }
     }
 
     async getCurrentlyLoggedInIdentityOrNull() {
         try {
+            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull')
+
             const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
             if(!token){
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No token')
                 return null
             }
 
             let identity = await this._getIdentityOrNullIfCookieRequired()
-
             if(!identity){
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity')
                 await this._setLegacyCookieIfPossible(token)
                 identity = await this._getIdentityOrNullIfCookieRequired()
             }
 
             if(!identity){
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity after legacy cookie')
                 return null
             }
 
+            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Identity', identity)
             return identity
         }
         catch(err) {
+            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Error', err)
             console.error(err)
 
             return null
@@ -105,6 +116,8 @@ export class Authenticator{
     }
 
     private async _getIdentityOrNullIfCookieRequired(){
+        this.emit('debug', 'Authenticator:getIdentityOrNullIfCookieRequired', cacheBustUrl(this._config.identityApiUrl))
+
         const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
@@ -112,6 +125,8 @@ export class Authenticator{
                 'Accept': 'application/json'
             }
         })
+
+        this.emit('debug', 'Authenticator:getIdentityOrNullIfCookieRequired:Response', res)
 
         if(res.status === 401){
             return null
@@ -133,6 +148,7 @@ export class Authenticator{
 
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
+            this.emit('debug', 'Authenticator:_setLegacyCookieIfPossible', { token, url: this._config.authenticateJwtUrl })
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -141,6 +157,7 @@ export class Authenticator{
                 }
             })
         }catch(err){
+            this.emit('debug', 'Authenticator:_setLegacyCookieIfPossible:Failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
         }
     }
@@ -158,10 +175,13 @@ export class Authenticator{
         }
 
         try{
+            this.emit('debug', `Auth0:checkSession`)
             const checkSession = promisify(this._webAuth.checkSession.bind(this._webAuth))
 
             return await checkSession(opts)
         }catch(error){
+            this.emit('debug', `Auth0:checkSession failed`, error)
+
             const errorsWhereAuthIsRequired = [
                 'login_required',
                 'consent_required',
@@ -185,6 +205,7 @@ export class Authenticator{
             await this._removeIdentity()
             return license
         } catch (err) {
+            console.log(err)
             throw err
         }
     }
