@@ -105,7 +105,7 @@ export class AuthManager extends EventEmitter<Events>{
 
     async changeActiveLicense(newLicense: string){
         await this._authenticator.changeActiveLicense(newLicense)
-        await this._handleAuthChange()
+        await this._handleAuthChange(newLicense)
     }
 
     hasValidProfile(identity: Identity){
@@ -186,8 +186,8 @@ export class AuthManager extends EventEmitter<Events>{
         this.emit('authorization-failure', {access})
     }
 
-    private async _handleAuthChange(){
-        const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
+    private async _handleAuthChange(attemptedLicense?: string){
+        const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull(attemptedLicense)
         if(!identity){
             return this._handleLoggedOut()
         }
