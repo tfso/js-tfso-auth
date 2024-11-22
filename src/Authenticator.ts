@@ -27,7 +27,7 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
-        if(await assert(() => !this._identityIsBeingFetched)) {
+        if(this._identityIsBeingFetched == false || await assert(() => !this._identityIsBeingFetched)) {
             if(attemptedLicense && this._identity?.license === attemptedLicense){
                 this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Using cached identity', this._identity)
                 return this._identity
