@@ -36,7 +36,7 @@ export class Authenticator extends EventEmitter<Events> {
             this._identityIsBeingFetched = true
             
             try {
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull')
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull', { attemptedLicense, cachedLicense: this._identity?.license })
 
                 const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
                 if(!token){
