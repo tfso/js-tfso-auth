@@ -12,7 +12,6 @@ export class Authenticator extends EventEmitter<Events> {
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
 
     private _identityIsBeingFetched = false
-    private _identityTimestamp: number = 0
     private _identity: types.Identity | null = null
 
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
@@ -21,11 +20,10 @@ export class Authenticator extends EventEmitter<Events> {
         this._config = { ...defaultConfig, ...config ?? {} }
     }
 
-    async getCurrentlyLoggedInIdentityOrNull() {
+    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
         if(await assert(() => !this._identityIsBeingFetched)) {
-            if(this._identity && this._identityTimestamp > (Date.now() - 1000 * 5)){
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Using cached identity')
-                
+            if(this._identity?.license === attemptedLicense){
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Using cached identity', this._identity)
                 return this._identity
             }
 
