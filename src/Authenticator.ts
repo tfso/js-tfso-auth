@@ -52,7 +52,6 @@ export class Authenticator extends EventEmitter<Events> {
 
                 this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Identity', identity)
                 
-                this._identityTimestamp = Date.now()
                 this._identity = identity
 
                 return identity
