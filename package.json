@@ -12,19 +12,19 @@
     "test": "echo no tests!"
   },
   "dependencies": {
-    "ably": "^1.2.49",
-    "auth0-js": "^9.24.1",
+    "ably": "^2.5.0",
+    "auth0-js": "^9.28.0",
     "eventemitter3": "^5.0.1"
   },
   "devDependencies": {
     "conventional-changelog-conventionalcommits": "^4.6.0",
-    "@rollup/plugin-commonjs": "^25.0.7",
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "@types/auth0-js": "9.21.5",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-typescript": "^12.1.1",
+    "@types/auth0-js": "9.21.6",
     "cross-env": "^7.0.3",
-    "rollup": "^4.12.0",
-    "tslib": "^2.6.2",
-    "typescript": "^5.3.3"
+    "rollup": "^4.27.3",
+    "tslib": "^2.8.1",
+    "typescript": "^5.6.3"
   }
 }
