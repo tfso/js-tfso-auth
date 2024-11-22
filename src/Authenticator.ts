@@ -7,6 +7,12 @@ import promisify from './promisify'
 
 type Events = 'debug'
 
+class HttpError extends Error {
+    constructor(public status: number, public statusText: string, public headers?: Response["headers"], public body?: Record<string, any>) {
+        super(`${status} ${statusText}`)
+    }
+}
+
 export class Authenticator extends EventEmitter<Events> {
     private _config: types.AuthenticatorConfig
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
@@ -189,7 +195,8 @@ export class Authenticator extends EventEmitter<Events> {
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: `${window.location.origin}/modules/auth/login-callback`
+            redirectUri: this._config.sessionCallbackUrl,
+            prompt: 'none'
         }
 
         try{
@@ -229,7 +236,7 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     private async _changePassportMap(data: { ClientId: string; UserId: string }){
-        return await fetch('/login/data/ChangePassportMap.aspx', {
+        const res = await fetch('/login/data/ChangePassportMap.aspx', {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -237,6 +244,10 @@ export class Authenticator extends EventEmitter<Events> {
             },
             body: mapToWWWEncoded(data)
         })
+        if(!res.ok) {
+            throw new HttpError(res.status, res.statusText, res.headers)
+        }
+        return res
     }
 
     private async _removeIdentity() {
