@@ -11,6 +11,10 @@ export class Authenticator extends EventEmitter<Events> {
     private _config: types.AuthenticatorConfig
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
 
+    private _identityIsBeingFetched = false
+    private _identityTimestamp: number = 0
+    private _identity: types.Identity | null = null
+
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
         super()
 
@@ -18,35 +22,52 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async getCurrentlyLoggedInIdentityOrNull() {
-        try {
-            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull')
+        if(await assert(() => !this._identityIsBeingFetched)) {
+            if(this._identity && this._identityTimestamp > (Date.now() - 1000 * 5)){
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Using cached identity')
+                
+                return this._identity
+            }
 
-            const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
-            if(!token){
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No token')
+            this._identityIsBeingFetched = true
+            
+            try {
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull')
+
+                const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+                if(!token){
+                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No token')
+                    return null
+                }
+
+                let identity = await this._getIdentityOrNullIfCookieRequired()
+                if(!identity){
+                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity')
+                    await this._setLegacyCookieIfPossible(token)
+                    identity = await this._getIdentityOrNullIfCookieRequired()
+                }
+
+                if(!identity){
+                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity after legacy cookie')
+                    return null
+                }
+
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Identity', identity)
+                
+                this._identityTimestamp = Date.now()
+                this._identity = identity
+
+                return identity
+            }
+            catch(err) {
+                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Error', err)
+                console.error(err)
+
                 return null
             }
-
-            let identity = await this._getIdentityOrNullIfCookieRequired()
-            if(!identity){
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity')
-                await this._setLegacyCookieIfPossible(token)
-                identity = await this._getIdentityOrNullIfCookieRequired()
+            finally {
+                this._identityIsBeingFetched = false
             }
-
-            if(!identity){
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity after legacy cookie')
-                return null
-            }
-
-            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Identity', identity)
-            return identity
-        }
-        catch(err) {
-            this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Error', err)
-            console.error(err)
-
-            return null
         }
     }
 
@@ -231,6 +252,7 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
 }
+
 const cacheBustUrl = url => {
     url = new URL(url, window.location.origin)
     url.searchParams.set('_dc', Date.now())
@@ -243,4 +265,28 @@ const mapToWWWEncoded = (
     return Object.entries(data)
         .map(([key, value]) => `${key}=${value}`)
         .join('&')
+}
+
+async function assert(assertion: () => boolean, interval?: number, timeout = 30000): Promise<boolean> {
+    const started = Date.now()
+
+    let counter = 0
+    do {
+        if (assertion() == true)
+            return true
+
+        await sleep(typeof interval == 'number' ? interval : Math.floor(10 + Math.pow(counter++, 2))) // 10, 11, 14, 19, 26, 35, 46, 59, 74, 91...
+    } while ((Date.now() - started) < timeout)
+    
+    return false
+}
+
+async function sleep(value = 1000): Promise<void> {
+    return new Promise((resolve, reject) => {
+        try {
+            setTimeout(resolve, Number(value) || 1000)
+        } catch (ex) {
+            reject(ex)
+        }
+    })
 }
