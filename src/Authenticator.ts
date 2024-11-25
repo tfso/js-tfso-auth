@@ -5,7 +5,7 @@ import * as types from './types'
 import defaultConfig from './defaultConfig'
 import promisify from './promisify'
 
-type Events = 'debug'
+type Events = 'error'
 
 class HttpError extends Error {
     constructor(public status: number, public statusText: string, public headers?: Response["headers"], public body?: Record<string, any>) {
@@ -27,50 +27,42 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
-        if(this._identityIsBeingFetched == false || await assert(() => !this._identityIsBeingFetched)) {
+        try {
+            if(this._identityIsBeingFetched)
+                await assert(() => !this._identityIsBeingFetched)
+            
+            this._identityIsBeingFetched = true
+
             if(attemptedLicense && this._identity?.license === attemptedLicense){
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Using cached identity', this._identity)
                 return this._identity
             }
 
-            this._identityIsBeingFetched = true
-            
-            try {
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull', { attemptedLicense, cachedLicense: this._identity?.license })
-
-                const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
-                if(!token){
-                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No token')
-                    return null
-                }
-
-                let identity = await this._getIdentityOrNullIfCookieRequired()
-                if(!identity){
-                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity')
-                    await this._setLegacyCookieIfPossible(token)
-                    identity = await this._getIdentityOrNullIfCookieRequired()
-                }
-
-                if(!identity){
-                    this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:No identity after legacy cookie')
-                    return null
-                }
-
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Identity', identity)
-                
-                this._identity = identity
-
-                return identity
-            }
-            catch(err) {
-                this.emit('debug', 'Authenticator:getCurrentlyLoggedInIdentityOrNull:Error', err)
-                console.error(err)
-
+            const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+            if(!token){
                 return null
             }
-            finally {
-                this._identityIsBeingFetched = false
+
+            let identity = await this._getIdentityOrNullIfCookieRequired()
+
+            if(!identity){
+                await this._setLegacyCookieIfPossible(token)
+                identity = await this._getIdentityOrNullIfCookieRequired()
             }
+
+            if(!identity){
+                return null
+            }
+            
+            this._identity = identity
+
+            return identity
+        }
+        catch(err) {
+            this.emit('error', 'Currently logged in identity not found', err)
+            return null
+        }
+        finally {
+            this._identityIsBeingFetched = false
         }
     }
 
@@ -140,8 +132,6 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     private async _getIdentityOrNullIfCookieRequired(){
-        this.emit('debug', 'Authenticator:getIdentityOrNullIfCookieRequired', cacheBustUrl(this._config.identityApiUrl))
-
         const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
@@ -149,8 +139,6 @@ export class Authenticator extends EventEmitter<Events> {
                 'Accept': 'application/json'
             }
         })
-
-        this.emit('debug', 'Authenticator:getIdentityOrNullIfCookieRequired:Response', res)
 
         if(res.status === 401){
             return null
@@ -172,7 +160,6 @@ export class Authenticator extends EventEmitter<Events> {
 
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
-            this.emit('debug', 'Authenticator:_setLegacyCookieIfPossible', { token, url: this._config.authenticateJwtUrl })
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -181,7 +168,7 @@ export class Authenticator extends EventEmitter<Events> {
                 }
             })
         }catch(err){
-            this.emit('debug', 'Authenticator:_setLegacyCookieIfPossible:Failed', err)
+            this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
         }
     }
@@ -200,13 +187,10 @@ export class Authenticator extends EventEmitter<Events> {
         }
 
         try{
-            this.emit('debug', `Auth0:checkSession`)
             const checkSession = promisify(this._webAuth.checkSession.bind(this._webAuth))
 
             return await checkSession(opts)
         }catch(error){
-            this.emit('debug', `Auth0:checkSession failed`, error)
-
             const errorsWhereAuthIsRequired = [
                 'login_required',
                 'consent_required',
@@ -230,7 +214,7 @@ export class Authenticator extends EventEmitter<Events> {
             await this._removeIdentity()
             return license
         } catch (err) {
-            console.log(err)
+            this.emit('error', 'Changing active license failed', err)
             throw err
         }
     }
