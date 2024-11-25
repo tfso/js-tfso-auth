@@ -1,24 +1,42 @@
 import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+import EventEmitter from 'eventemitter3'
 
 import * as types from './types'
 import defaultConfig from './defaultConfig'
 import promisify from './promisify'
+
+type Events = 'error'
 
 class HttpError extends Error {
     constructor(public status: number, public statusText: string, public headers?: Response["headers"], public body?: Record<string, any>) {
         super(`${status} ${statusText}`)
     }
 }
-export class Authenticator{
+
+export class Authenticator extends EventEmitter<Events> {
     private _config: types.AuthenticatorConfig
     private _baseUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
 
+    private _identityIsBeingFetched = false
+    private _identity: types.Identity | null = null
+
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
+        super()
+
         this._config = { ...defaultConfig, ...config ?? {} }
     }
 
-    async getCurrentlyLoggedInIdentityOrNull() {
+    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
         try {
+            if(this._identityIsBeingFetched)
+                await assert(() => !this._identityIsBeingFetched)
+            
+            this._identityIsBeingFetched = true
+
+            if(attemptedLicense && this._identity?.license === attemptedLicense){
+                return this._identity
+            }
+
             const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
             if(!token){
                 return null
@@ -34,13 +52,17 @@ export class Authenticator{
             if(!identity){
                 return null
             }
+            
+            this._identity = identity
 
             return identity
         }
         catch(err) {
-            console.error('Not logged in', err)
-
+            this.emit('error', 'Currently logged in identity not found', err)
             return null
+        }
+        finally {
+            this._identityIsBeingFetched = false
         }
     }
 
@@ -146,6 +168,7 @@ export class Authenticator{
                 }
             })
         }catch(err){
+            this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
         }
     }
@@ -191,6 +214,7 @@ export class Authenticator{
             await this._removeIdentity()
             return license
         } catch (err) {
+            this.emit('error', 'Changing active license failed', err)
             throw err
         }
     }
@@ -220,6 +244,7 @@ export class Authenticator{
     }
 
 }
+
 const cacheBustUrl = url => {
     url = new URL(url, window.location.origin)
     url.searchParams.set('_dc', Date.now())
@@ -232,4 +257,28 @@ const mapToWWWEncoded = (
     return Object.entries(data)
         .map(([key, value]) => `${key}=${value}`)
         .join('&')
+}
+
+async function assert(assertion: () => boolean, interval?: number, timeout = 30000): Promise<boolean> {
+    const started = Date.now()
+
+    let counter = 0
+    do {
+        if (assertion() == true)
+            return true
+
+        await sleep(typeof interval == 'number' ? interval : Math.floor(10 + Math.pow(counter++, 2))) // 10, 11, 14, 19, 26, 35, 46, 59, 74, 91...
+    } while ((Date.now() - started) < timeout)
+    
+    return false
+}
+
+async function sleep(value = 1000): Promise<void> {
+    return new Promise((resolve, reject) => {
+        try {
+            setTimeout(resolve, Number(value) || 1000)
+        } catch (ex) {
+            reject(ex)
+        }
+    })
 }

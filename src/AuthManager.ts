@@ -11,6 +11,7 @@ type Events =
     'authentication-logout' |
     'authentication-licensechange' |
     'authentication-notifications-unavailable' |
+    'authentication-error' |
     'authorization-start' |
     'authorization-complete' |
     'authorization-attempt' |
@@ -44,6 +45,15 @@ export class AuthManager extends EventEmitter<Events>{
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
         this._authorizer.on('access-failure', access => this._handleAuthorizationFailure(access))
+        this._authenticator.on('error', (message, err) => { 
+            if(this.listenerCount('authentication-error') > 0) {
+                this.emit('authentication-error', message, err)
+            } 
+            else {
+                console.log(message)
+                console.error(err) 
+            }
+        })
 
         this._authChangeNotifier.on('login', () => this._handleAuthChange())
         this._authChangeNotifier.on('change', () => this._handleAuthChange())
@@ -54,6 +64,7 @@ export class AuthManager extends EventEmitter<Events>{
     /*
     Override .on to get better typescript help
      */
+    on(event: 'authentication-error', fn: (message: string, err: Error) => void, context?: any): this
     on(event: 'authentication-attempt', fn: () => void, context?: any): this
     on(event: 'authentication-success', fn: (event: {identity: Identity}) => void, context?: any): this
     on(event: 'authentication-failure', fn: (event: {err: Error}) => void, context?: any): this
@@ -102,7 +113,7 @@ export class AuthManager extends EventEmitter<Events>{
 
     async changeActiveLicense(newLicense: string){
         await this._authenticator.changeActiveLicense(newLicense)
-        await this._handleAuthChange()
+        await this._handleAuthChange(newLicense)
     }
 
     hasValidProfile(identity: Identity){
@@ -183,8 +194,8 @@ export class AuthManager extends EventEmitter<Events>{
         this.emit('authorization-failure', {access})
     }
 
-    private async _handleAuthChange(){
-        const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
+    private async _handleAuthChange(attemptedLicense?: string){
+        const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull(attemptedLicense)
         if(!identity){
             return this._handleLoggedOut()
         }

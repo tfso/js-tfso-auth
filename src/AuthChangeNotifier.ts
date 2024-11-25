@@ -1,8 +1,8 @@
-import * as Ably from 'ably'
+import { Realtime, ConnectionState } from 'ably'
 import EventEmitter from 'eventemitter3'
 import {Authenticator} from './Authenticator'
 
-const AblyConnectionState: {[key: string]: Ably.Types.ConnectionState} = {
+const AblyConnectionState: {[key: string]: ConnectionState} = {
     initialized: "initialized", // Not yet started to connect
     connecting: "connecting", // Connecting
     connected: "connected", // Connected
@@ -20,7 +20,7 @@ type Events =
     'change'
 
 export class AuthChangeNotifier extends EventEmitter<Events>{
-    private _ably: Ably.Realtime
+    private _ably: Realtime
     private _lastLoginCheck: number
     private _authenticator: Authenticator
 
@@ -30,7 +30,7 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
         this._authenticator = authenticator
         this._lastLoginCheck = Date.now()
 
-        this._ably = new Ably.Realtime({
+        this._ably = new Realtime({
             authUrl: 'https://ably.api.24sevenoffice.com/auth',
             authHeaders: {authorization: 'IGNORED'},
             autoConnect: false
