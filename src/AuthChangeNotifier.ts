@@ -23,6 +23,7 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
     private _ably: Realtime
     private _lastLoginCheck: number
     private _authenticator: Authenticator
+    private _enabled = true
 
     constructor(authenticator: Authenticator){
         super()
@@ -46,6 +47,14 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
         this._ably.connection.on(AblyConnectionState.failed, () => this.emit('connection-failed'))
     }
 
+    enable() { 
+        this._enabled = true
+    }
+
+    disable() {
+        this._enabled = false
+    }
+
     listen(license: string){
         this._ably.close()
         this._ably.connect()
@@ -55,8 +64,20 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
 
         channel.subscribe('authentication', event => {
             const type = event.data.type
-            if(['login', 'logout', 'change'].includes(type)){
-                this.emit(type)
+            const license = event.data.license
+
+            if(!this._enabled)
+                return
+
+            switch (type) {
+                case 'login': 
+                case 'logout':
+                    this.emit(type)
+                    break
+
+                case 'change': 
+                    this.emit(type, license)
+                    break;
             }
         })
 
@@ -77,6 +98,9 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
 
                 const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
                 if(!identity){
+                    if(!this._enabled)
+                        return
+
                     this.emit('logout')
                 }
             }
