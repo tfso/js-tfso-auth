@@ -56,7 +56,7 @@ export class AuthManager extends EventEmitter<Events>{
         })
 
         this._authChangeNotifier.on('login', () => this._handleAuthChange())
-        this._authChangeNotifier.on('change', () => this._handleAuthChange())
+        this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
         this._authChangeNotifier.on('logout', () => this._handleAuthChange())
         this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
     }
@@ -112,8 +112,15 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async changeActiveLicense(newLicense: string){
-        await this._authenticator.changeActiveLicense(newLicense)
-        await this._handleAuthChange(newLicense)
+        try {
+            this._authChangeNotifier.disable()
+
+            await this._authenticator.changeActiveLicense(newLicense)
+            await this._handleAuthChange(newLicense)
+        }
+        finally {
+            this._authChangeNotifier.enable()
+        }
     }
 
     hasValidProfile(identity: Identity){
