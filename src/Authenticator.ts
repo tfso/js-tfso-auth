@@ -26,6 +26,10 @@ export class Authenticator extends EventEmitter<Events> {
         this._config = { ...defaultConfig, ...config ?? {} }
     }
 
+    get webAuth() {
+        return this._webAuth
+    }
+
     async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
         try {
             if(this._identityIsBeingFetched)
