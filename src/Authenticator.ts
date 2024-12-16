@@ -80,13 +80,17 @@ export class Authenticator extends EventEmitter<Events> {
         return identity
     }
 
-    login() {
+    login(returnUrl?: string) {
         const redirectUrl = new URL(this._config.callbackUrl ?? `/modules/auth/login-callback`, window.location.origin)
 
         if(window.location.search){
             for(let [key, value] of new URLSearchParams(window.location.search)){
                 redirectUrl.searchParams.append(key, value)
             }
+        }
+
+        if(returnUrl){
+            redirectUrl.searchParams.set('returnTo', returnUrl)
         }
 
         this._webAuth.authorize({
@@ -104,7 +108,7 @@ export class Authenticator extends EventEmitter<Events> {
             fetch(`${this._baseUrl}/login/data/Logout.aspx`, { method: 'POST', credentials: 'same-origin' })
         ])
 
-        this._webAuth.logout({ 
+        this._webAuth.logout({
             returnTo
         })
     }
@@ -115,6 +119,8 @@ export class Authenticator extends EventEmitter<Events> {
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
     async callback(): Promise<Auth0DecodedHash | null> {
+
+
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token = await parseHarsh()
 

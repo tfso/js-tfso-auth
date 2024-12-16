@@ -134,7 +134,7 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
-        this._handleLoggedOut()
+        this._handleLoggedOut(returnUrl)
         
         return this._authenticator.logout(returnUrl)
     }
@@ -165,15 +165,13 @@ export class AuthManager extends EventEmitter<Events>{
         return this._config.tokens
     }
 
-    private _handleLoggedOut(){
+    private _handleLoggedOut(returnUrl?: string){
         this.emit('authentication-logout')
 
-        const defaultHandler = () => this._authenticator.login()
+        const defaultHandler = () => { }
 
         if(this._config.logoutHandler){
             this._config.logoutHandler(defaultHandler)
-        }else{
-            defaultHandler()
         }
     }
 
@@ -204,7 +202,8 @@ export class AuthManager extends EventEmitter<Events>{
     private async _handleAuthChange(attemptedLicense?: string){
         const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull(attemptedLicense)
         if(!identity){
-            return this._handleLoggedOut()
+            this._handleLoggedOut()
+            this._authenticator.login(window.location.href)
         }
 
         if(identity.license !== (this.identity != null ? this.identity.license : '')){
