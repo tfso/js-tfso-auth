@@ -165,7 +165,7 @@ export class AuthManager extends EventEmitter<Events>{
         return this._config.tokens
     }
 
-    private _handleLoggedOut(returnUrl?: string){
+    private _handleLoggedOut(){
         this.emit('authentication-logout')
 
         const defaultHandler = () => { }
