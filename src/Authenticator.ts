@@ -115,18 +115,17 @@ export class Authenticator extends EventEmitter<Events> {
 
     /**
      * Verify callback from login provider
-     * @returns The token if the user is logged in, otherwise null
+     * @returns The identity if the user is logged in, otherwise null
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
-    async callback(): Promise<Auth0DecodedHash | null> {
-
-
+    async callback(): Promise<Record<string, any> | null> {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token = await parseHarsh()
 
         await this._setLegacyCookieIfPossible(token)
 
-        return token
+        const identity = this._getIdentityOrNullIfCookieRequired()
+        return identity
     }
 
     redirectToLogin(){
