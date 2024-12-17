@@ -1,4 +1,4 @@
-import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+import { WebAuth } from 'auth0-js'
 import EventEmitter from 'eventemitter3'
 
 import * as types from './types'
