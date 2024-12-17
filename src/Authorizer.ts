@@ -1,4 +1,4 @@
-import { WebAuth } from 'auth0-js'
+import { CheckSessionOptions, WebAuth } from 'auth0-js'
 
 import EventEmitter from 'eventemitter3'
 import * as types from './types'
@@ -145,23 +145,35 @@ export class Authorizer extends EventEmitter<Events>{
         const [identityId, clientId, userId] = license.split(';')
 
         // NB: We add a serial number to keep each state unique. checkSession needs this when called several times in parallel
-        const opts = {
+        const opts: CheckSessionOptions = {
             audience: tokenConfig.audience,
             scope: tokenConfig.scopes.join(' '),
-            state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
+            //state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
             responseType: 'token',
             redirectUri: this._config.sessionCallbackUrl,
             prompt: 'none'
         }
 
         const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))
-
         try{
-            const token = await checkSession(opts)
+            const token = await checkSession({ ...opts, login_license: `${identityId};${clientId};${userId}` })
             const expiresAt = token.expiresIn !== undefined ? token.expiresIn + Date.now() : null
+
             return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
-        }catch(error){
+        }catch(error) {
             return {type: 'error', tokenConfig, token: null, error, license}
+        }finally {
+            this._removeAuth0TemporaryCookies()
+        }
+    }
+
+    private _removeAuth0TemporaryCookies() {
+        for(const cookie of document.cookie.split(';')) {
+            const name = cookie.trim().split('=')[0]
+            
+            if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
+                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
+            }
         }
     }
 }
