@@ -148,7 +148,7 @@ export class Authorizer extends EventEmitter<Events>{
         const opts: CheckSessionOptions = {
             audience: tokenConfig.audience,
             scope: tokenConfig.scopes.join(' '),
-            //state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
+            //state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`, // replaced with login_license hint below
             responseType: 'token',
             redirectUri: this._config.sessionCallbackUrl,
             prompt: 'none'
