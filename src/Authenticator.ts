@@ -1,4 +1,4 @@
-import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+import { WebAuth } from 'auth0-js'
 import EventEmitter from 'eventemitter3'
 
 import * as types from './types'
@@ -23,7 +23,11 @@ export class Authenticator extends EventEmitter<Events> {
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
         super()
 
-        this._config = { ...defaultConfig, ...config ?? {} }
+        this._config = { ...defaultConfig, ...config ?? {}, optionsAuth0: { ...defaultConfig.optionsAuth0, ...config.optionsAuth0 ?? {} } }
+    }
+
+    get webAuth() {
+        return this._webAuth
     }
 
     async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
@@ -76,13 +80,17 @@ export class Authenticator extends EventEmitter<Events> {
         return identity
     }
 
-    login() {
+    login(returnUrl?: string) {
         const redirectUrl = new URL(this._config.callbackUrl ?? `/modules/auth/login-callback`, window.location.origin)
 
         if(window.location.search){
             for(let [key, value] of new URLSearchParams(window.location.search)){
                 redirectUrl.searchParams.append(key, value)
             }
+        }
+
+        if(returnUrl){
+            redirectUrl.searchParams.set('returnTo', returnUrl)
         }
 
         this._webAuth.authorize({
@@ -93,30 +101,32 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async logout(returnUrl?: string) {
-        const returnTo = returnUrl ?? `${this._baseUrl}/login`
+        const loginUrl = typeof this._config.loginUrl == 'function' ? this._config.loginUrl() : this._config.loginUrl
+        const returnTo = new URL(returnUrl ?? loginUrl ?? `${this._baseUrl}/modules/auth/login/`, window.location.origin).toString()
 
         await Promise.all([
             fetch(`${this._baseUrl}/script/client/login/logoff.asp?_dc=${Date.now()}`, { credentials: 'same-origin' }),
             fetch(`${this._baseUrl}/login/data/Logout.aspx`, { method: 'POST', credentials: 'same-origin' })
         ])
 
-        this._webAuth.logout({ 
+        this._webAuth.logout({
             returnTo
         })
     }
 
     /**
      * Verify callback from login provider
-     * @returns The token if the user is logged in, otherwise null
+     * @returns The identity if the user is logged in, otherwise null
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
-    async callback(): Promise<Auth0DecodedHash | null> {
+    async callback(): Promise<Record<string, any> | null> {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token = await parseHarsh()
 
         await this._setLegacyCookieIfPossible(token)
 
-        return token
+        const identity = this._getIdentityOrNullIfCookieRequired()
+        return identity
     }
 
     redirectToLogin(){
@@ -182,7 +192,7 @@ export class Authenticator extends EventEmitter<Events> {
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: this._config.sessionCallbackUrl,
+            redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
 
