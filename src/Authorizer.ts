@@ -150,7 +150,7 @@ export class Authorizer extends EventEmitter<Events>{
             scope: tokenConfig.scopes.join(' '),
             //state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`, // replaced with login_license hint below
             responseType: 'token',
-            redirectUri: this._config.sessionCallbackUrl,
+            redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
 
