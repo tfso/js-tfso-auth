@@ -101,7 +101,8 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async logout(returnUrl?: string) {
-        const returnTo = returnUrl ?? `${this._baseUrl}/login`
+        const loginUrl = typeof this._config.loginUrl == 'function' ? this._config.loginUrl() : this._config.loginUrl
+        const returnTo = returnUrl ?? loginUrl ?? `${this._baseUrl}/modules/auth/login/`
 
         await Promise.all([
             fetch(`${this._baseUrl}/script/client/login/logoff.asp?_dc=${Date.now()}`, { credentials: 'same-origin' }),
