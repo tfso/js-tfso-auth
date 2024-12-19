@@ -191,7 +191,7 @@ export class Authenticator extends EventEmitter<Events> {
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: this._config.sessionCallbackUrl,
+            redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
 

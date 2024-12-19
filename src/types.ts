@@ -39,7 +39,7 @@ export interface AuthenticatorConfig{
     loginUrl: string | (() => string)
     logoutUrl: string | (() => string)
     callbackUrl: string
-    sessionCallbackUrl: string
+    sessionCallbackUrl?: string
 }
 
 export type AuthorizerConfig = AuthenticatorConfig
