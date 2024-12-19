@@ -23,7 +23,7 @@ export class Authenticator extends EventEmitter<Events> {
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
         super()
 
-        this._config = { ...defaultConfig, ...config ?? {} }
+        this._config = { ...defaultConfig, ...config ?? {}, optionsAuth0: { ...defaultConfig.optionsAuth0, ...config.optionsAuth0 ?? {} } }
     }
 
     get webAuth() {
