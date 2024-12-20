@@ -87,6 +87,8 @@ export class AuthManager extends EventEmitter<Events>{
     async login(){
         this.emit('authentication-attempt')
         try{
+            this._authChangeNotifier.disable()
+
             const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
             this.emit('debug', `AuthManager: Login and currently identity ${identity?.license}`)
@@ -107,6 +109,9 @@ export class AuthManager extends EventEmitter<Events>{
             this.emit('authentication-failure', {err})
             
             return false
+        }
+        finally {
+            this._authChangeNotifier.enable()
         }
 
         this.emit('authorization-start')
@@ -139,11 +144,17 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
-        this.emit('debug', `AuthManager: Logging out`)
+        try {
+            this._authChangeNotifier.disable()
+            
+            this.emit('debug', `AuthManager: Logging out`)
 
-        this._handleLoggedOut()
-        
-        return this._authenticator.logout(returnUrl)
+            this._handleLoggedOut()
+            return this._authenticator.logout(returnUrl)
+        }
+        finally {
+            this._authChangeNotifier.enable()
+        }
     }
 
     async callback(){
