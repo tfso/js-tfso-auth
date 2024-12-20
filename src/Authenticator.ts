@@ -31,9 +31,9 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     private get loginUrl() {
-        return typeof this._config.logoutUrl === 'function'
-            ? this._config.logoutUrl()
-            : this._config.logoutUrl
+        return typeof this._config.loginUrl === 'function'
+            ? this._config.loginUrl()
+            : this._config.loginUrl
     }
 
     private get logoutUrl() {
@@ -193,7 +193,7 @@ export class Authenticator extends EventEmitter<Events> {
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
             this.emit('debug', `Authenticator: Setting Legacy cookie`)
-            
+
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
