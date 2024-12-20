@@ -30,6 +30,18 @@ export class Authenticator extends EventEmitter<Events> {
         return this._webAuth
     }
 
+    private get loginUrl() {
+        return typeof this._config.logoutUrl === 'function'
+            ? this._config.logoutUrl()
+            : this._config.logoutUrl
+    }
+
+    private get logoutUrl() {
+        return typeof this._config.logoutUrl === 'function'
+            ? this._config.logoutUrl()
+            : this._config.logoutUrl
+    }
+
     async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
         try {
             if(this._identityIsBeingFetched)
@@ -90,7 +102,7 @@ export class Authenticator extends EventEmitter<Events> {
         }
 
         if(returnUrl){
-            redirectUrl.searchParams.set('returnTo', returnUrl)
+            redirectUrl.searchParams.set('returnUrl', returnUrl)
         }
 
         this._webAuth.authorize({
@@ -101,8 +113,7 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async logout(returnUrl?: string) {
-        const loginUrl = typeof this._config.loginUrl == 'function' ? this._config.loginUrl() : this._config.loginUrl
-        const returnTo = new URL(loginUrl ?? `${this._baseUrl}/modules/auth/login/`, window.location.origin)
+        const returnTo = new URL(this.loginUrl ?? `${this._baseUrl}/modules/auth/login/`, window.location.origin)
         
         if(returnUrl){
             returnTo.searchParams.set('returnUrl', returnUrl)
@@ -133,16 +144,12 @@ export class Authenticator extends EventEmitter<Events> {
         return identity
     }
 
-    redirectToLogin(){
-        window.location.href = typeof this._config.loginUrl === 'function'
-            ? this._config.loginUrl()
-            : this._config.loginUrl
+    public redirectToLogin(){
+        window.location.href = this.loginUrl
     }
 
-    redirectToLogout(){
-        window.location.href = typeof this._config.logoutUrl === 'function'
-            ? this._config.logoutUrl()
-            : this._config.logoutUrl
+    public redirectToLogout(){
+        window.location.href = this.logoutUrl
     }
 
     private async _getIdentityOrNullIfCookieRequired(){
