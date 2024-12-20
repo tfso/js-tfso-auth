@@ -28,7 +28,7 @@ const userHasAllRequiredProfileInfo = (identity: Identity) => {
 export class AuthManager extends EventEmitter<Events>{
     private _authenticator: Authenticator
     private _authorizer: Authorizer
-    private _authChangeNotifier: AuthChangeNotifier
+    private _authChangeNotifier: AuthChangeNotifier | undefined
     private _config: AuthManagerConfig
 
     identity: Identity | null = null
@@ -37,7 +37,15 @@ export class AuthManager extends EventEmitter<Events>{
         super()
         this._authenticator = authenticator
         this._authorizer = authorizer
-        this._authChangeNotifier = new AuthChangeNotifier(authenticator)
+
+        if(config.disableNotifier !== true) {
+            this._authChangeNotifier = new AuthChangeNotifier(authenticator)
+
+            this._authChangeNotifier.on('login', () => this._handleAuthChange())
+            this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
+            this._authChangeNotifier.on('logout', () => this._handleAuthChange())
+            this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
+        }
 
         this._config = { ...{
             tokens: [],
@@ -57,11 +65,6 @@ export class AuthManager extends EventEmitter<Events>{
             }
         })
         this._authenticator.on('debug', message => this.emit('debug', message))
-
-        this._authChangeNotifier.on('login', () => this._handleAuthChange())
-        this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
-        this._authChangeNotifier.on('logout', () => this._handleAuthChange())
-        this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
     }
 
     /*
@@ -87,7 +90,7 @@ export class AuthManager extends EventEmitter<Events>{
     async login(){
         this.emit('authentication-attempt')
         try{
-            this._authChangeNotifier.disable()
+            this._authChangeNotifier?.disable()
 
             const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
@@ -103,7 +106,7 @@ export class AuthManager extends EventEmitter<Events>{
                 this.requireValidProfile(identity)
             }
             this.emit('authentication-success', {identity})
-            this._authChangeNotifier.listen(identity.license)
+            this._authChangeNotifier?.listen(identity.license)
         }catch(err){
             this.identity = null
             this.emit('authentication-failure', {err})
@@ -113,7 +116,7 @@ export class AuthManager extends EventEmitter<Events>{
             return false
         }
         finally {
-            this._authChangeNotifier.enable()
+            this._authChangeNotifier?.enable()
         }
 
         this.emit('authorization-start')
@@ -124,15 +127,8 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async changeActiveLicense(newLicense: string){
-        try {
-            this._authChangeNotifier.disable()
-
-            await this._authenticator.changeActiveLicense(newLicense)
-            await this._handleAuthChange(newLicense)
-        }
-        finally {
-            this._authChangeNotifier.enable()
-        }
+        await this._authenticator.changeActiveLicense(newLicense)
+        await this._handleAuthChange(newLicense)
     }
 
     hasValidProfile(identity: Identity){
@@ -146,17 +142,10 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
-        try {
-            this._authChangeNotifier.disable()
+        this.emit('debug', `AuthManager: Logging out`)
 
-            this.emit('debug', `AuthManager: Logging out`)
-
-            this._handleLoggedOut()
-            return this._authenticator.logout(returnUrl)
-        }
-        finally {
-            this._authChangeNotifier.enable()
-        }
+        this._handleLoggedOut()
+        return this._authenticator.logout(returnUrl)
     }
 
     async callback(){
