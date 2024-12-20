@@ -148,7 +148,8 @@ export class Authorizer extends EventEmitter<Events>{
         const opts: CheckSessionOptions = {
             audience: tokenConfig.audience,
             scope: tokenConfig.scopes.join(' '),
-            //state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`, // replaced with login_license hint below
+            state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
+            //login_hint: `${identityId};${clientId};${userId}`,
             responseType: 'token',
             redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
@@ -156,7 +157,7 @@ export class Authorizer extends EventEmitter<Events>{
 
         const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))
         try{
-            const token = await checkSession({ ...opts, login_license: `${identityId};${clientId};${userId}` })
+            const token = await checkSession(opts)
             const expiresAt = token.expiresIn !== undefined ? token.expiresIn + Date.now() : null
 
             return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
