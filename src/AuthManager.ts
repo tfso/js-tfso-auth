@@ -108,6 +108,8 @@ export class AuthManager extends EventEmitter<Events>{
             this.identity = null
             this.emit('authentication-failure', {err})
             
+            this._authenticator.login()
+
             return false
         }
         finally {
@@ -146,7 +148,7 @@ export class AuthManager extends EventEmitter<Events>{
     async logout(returnUrl?: string){
         try {
             this._authChangeNotifier.disable()
-            
+
             this.emit('debug', `AuthManager: Logging out`)
 
             this._handleLoggedOut()
