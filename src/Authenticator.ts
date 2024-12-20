@@ -42,7 +42,7 @@ export class Authenticator extends EventEmitter<Events> {
             : this._config.logoutUrl
     }
 
-    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
+    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string): Promise<types.Identity | null> {
         try {
             if(this._identityIsBeingFetched)
                 await assert(() => !this._identityIsBeingFetched)

@@ -87,8 +87,9 @@ export class AuthManager extends EventEmitter<Events>{
     async login(){
         this.emit('authentication-attempt')
         try{
-            const identity: Identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
+            const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
+            this.emit('debug', `AuthManager: Login and currently identity ${identity?.license}`)
             if(identity === null) {
                 this._authenticator.login()
 
