@@ -43,7 +43,7 @@ export class AuthManager extends EventEmitter<Events>{
 
             this._authChangeNotifier.on('login', () => this._handleAuthChange())
             this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
-            this._authChangeNotifier.on('logout', () => this._handleAuthChange())
+            this._authChangeNotifier.on('logout', () => this.logout(window.location.href))
             this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
         }
 
@@ -143,9 +143,18 @@ export class AuthManager extends EventEmitter<Events>{
 
     async logout(returnUrl?: string){
         this.emit('debug', `AuthManager: Logging out`)
+        try{
+            this._authChangeNotifier?.disable()
 
-        this._handleLoggedOut()
-        return this._authenticator.logout(returnUrl)
+            this._handleLoggedOut()
+            await this._authenticator.logout(returnUrl)
+        }
+        catch(err){
+            this.emit('authentication-error', 'Error when logging out', err)
+        }
+        finally{
+            this._authChangeNotifier?.enable()
+        }
     }
 
     async callback(){
@@ -219,7 +228,7 @@ export class AuthManager extends EventEmitter<Events>{
 
         this.emit('debug', `AuthManager: Handling auth change to ${attemptedLicense}`)
 
-        if(identity.license !== (this.identity != null ? this.identity.license : '')){
+        if(identity.license !== (this.identity?.license ?? '')){
             return this._handleLicenseChanged(identity)
         }
     }
