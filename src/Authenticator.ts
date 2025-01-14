@@ -109,6 +109,8 @@ export class Authenticator extends EventEmitter<Events> {
 
         this.emit('debug', `Authenticator: Logging in`)
 
+        this._removeAuth0TemporaryCookies()
+
         this._webAuth.authorize({
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
@@ -277,6 +279,15 @@ export class Authenticator extends EventEmitter<Events> {
         )
     }
 
+    private _removeAuth0TemporaryCookies() {
+        for(const cookie of document.cookie.split(';')) {
+            const name = cookie.trim().split('=')[0]
+            
+            if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
+                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
+            }
+        }
+    }
 }
 
 const cacheBustUrl = url => {

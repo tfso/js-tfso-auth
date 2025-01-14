@@ -165,18 +165,6 @@ export class Authorizer extends EventEmitter<Events>{
             return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
         }catch(error) {
             return {type: 'error', tokenConfig, token: null, error, license}
-        }finally {
-            this._removeAuth0TemporaryCookies()
-        }
-    }
-
-    private _removeAuth0TemporaryCookies() {
-        for(const cookie of document.cookie.split(';')) {
-            const name = cookie.trim().split('=')[0]
-            
-            if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
-                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
-            }
         }
     }
 }
