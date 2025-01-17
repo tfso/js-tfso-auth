@@ -4,20 +4,6 @@ import {Authorizer} from './Authorizer'
 import {AuthChangeNotifier} from './AuthChangeNotifier'
 import {AccessFailure, AccessSuccess, AuthManagerConfig, Identity, TokenConfig} from './types'
 
-type LoginOptions = {    
-    /**
-     * Redirect to login page if not logged in
-     * @default true
-     */
-    redirectToLogin?: boolean 
-
-    /**
-     * Authorize tokens after login
-     * @default true
-     */
-    authorize?: boolean 
-}
-
 type Events =
     'authentication-attempt' |
     'authentication-success' |
@@ -104,8 +90,7 @@ export class AuthManager extends EventEmitter<Events>{
     /**
      * Login to the system and authorize tokens if successful, otherwise redirect to login page
      */
-    async login(options: LoginOptions = { redirectToLogin: true, authorize: true }){
-        const { redirectToLogin, authorize } = options
+    async login(){
         this.emit('authentication-attempt')
         try{
             this._authChangeNotifier?.disable()
@@ -114,8 +99,7 @@ export class AuthManager extends EventEmitter<Events>{
 
             this.emit('debug', `AuthManager: Login and currently identity ${identity?.license}`)
             if(identity === null) {
-                if(redirectToLogin !== false)
-                    this._authenticator.login()
+                this._authenticator.login()
 
                 return false
             }
@@ -130,20 +114,17 @@ export class AuthManager extends EventEmitter<Events>{
             this.identity = null
             this.emit('authentication-failure', {err})
             
-            if(redirectToLogin !== false)
-                this._authenticator.login()
+            this._authenticator.login()
 
             return false
         }
         finally {
             this._authChangeNotifier?.enable()
         }
-
-        if(authorize !== false) {
-            this.emit('authorization-start')
-            await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
-            this.emit('authorization-complete')
-        }
+        
+        this.emit('authorization-start')
+        await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
+        this.emit('authorization-complete')
 
         return true
     }
