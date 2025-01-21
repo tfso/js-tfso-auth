@@ -5,7 +5,7 @@ import * as types from './types'
 import defaultConfig from './defaultConfig'
 import promisify from './promisify'
 
-type Events = 'error' | 'debug'
+type Events = 'error'
 
 class HttpError extends Error {
     constructor(public status: number, public statusText: string, public headers?: Response["headers"], public body?: Record<string, any>) {
@@ -102,12 +102,8 @@ export class Authenticator extends EventEmitter<Events> {
         }
 
         if(returnUrl){
-            this.emit('debug', `Authenticator: Logging in with return url "${returnUrl}"`)
-
             redirectUrl.searchParams.set('returnUrl', returnUrl)
         }
-
-        this.emit('debug', `Authenticator: Logging in`)
 
         this._removeAuth0TemporaryCookies()
 
@@ -122,18 +118,13 @@ export class Authenticator extends EventEmitter<Events> {
         const returnTo = new URL(this.loginUrl ?? `${this._baseUrl}/modules/auth/login/`, window.location.origin)
         
         if(returnUrl){
-            this.emit('debug', `Authenticator: Logging out with return url "${returnUrl}"`)
             returnTo.searchParams.set('returnUrl', returnUrl)
         }
-
-        this.emit('debug', `Authenticator: Logging out of legacy services`)
 
         await Promise.all([
             fetch(`${this._baseUrl}/script/client/login/logoff.asp?_dc=${Date.now()}`, { credentials: 'same-origin' }),
             fetch(`${this._baseUrl}/login/data/Logout.aspx`, { method: 'POST', credentials: 'same-origin' })
         ])
-
-        this.emit('debug', `Authenticator: Logging out of Auth0`)
 
         this._webAuth.logout({
             returnTo: returnTo.toString()
@@ -146,8 +137,6 @@ export class Authenticator extends EventEmitter<Events> {
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
     async callback(): Promise<Record<string, any> | null> {
-        this.emit('debug', `Authenticator: Handling callback`)
-
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token = await parseHarsh()
 
@@ -194,8 +183,6 @@ export class Authenticator extends EventEmitter<Events> {
 
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
-            this.emit('debug', `Authenticator: Setting Legacy cookie`)
-
             await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',

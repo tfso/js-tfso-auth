@@ -6,7 +6,7 @@ import defaultConfig from './defaultConfig'
 import {AccessFailure, AccessSuccess, TokenConfig} from './types'
 import promisify from './promisify'
 
-type Events = 'access-success' | 'access-failure' | 'debug'
+type Events = 'access-success' | 'access-failure'
 
 export class Authorizer extends EventEmitter<Events>{
     _config: types.AuthorizerConfig
@@ -155,15 +155,13 @@ export class Authorizer extends EventEmitter<Events>{
             prompt: 'none'
         }
 
-        this.emit('debug', `Authorizer: Checking session`)
-
         const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))
+
         try{
             const token = await checkSession(opts)
             const expiresAt = token.expiresIn !== undefined ? token.expiresIn + Date.now() : null
-
             return {type: 'success', tokenConfig, token, error: null, license, expiresAt}
-        }catch(error) {
+        }catch(error){
             return {type: 'error', tokenConfig, token: null, error, license}
         }
     }
