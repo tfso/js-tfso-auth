@@ -6,7 +6,7 @@ import defaultConfig from './defaultConfig'
 import {AccessFailure, AccessSuccess, TokenConfig} from './types'
 import promisify from './promisify'
 
-type Events = 'access-success' | 'access-failure'
+type Events = 'access-success' | 'access-failure' | 'debug'
 
 export class Authorizer extends EventEmitter<Events>{
     _config: types.AuthorizerConfig
@@ -154,6 +154,8 @@ export class Authorizer extends EventEmitter<Events>{
             redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
+
+        this.emit('debug', `Authorizer: Checking session`)
 
         const checkSession = promisify<any>(this._webAuth.checkSession.bind(this._webAuth))
 
