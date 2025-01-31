@@ -16,7 +16,8 @@ type Events =
     'authorization-complete' |
     'authorization-attempt' |
     'authorization-success' |
-    'authorization-failure'
+    'authorization-failure' | 
+    'debug'
 
 const userHasAllRequiredProfileInfo = (identity: Identity) => {
     const hasClient = identity?.client?.id != null && Number(identity?.client?.id) > 0
@@ -53,6 +54,7 @@ export class AuthManager extends EventEmitter<Events>{
 
         this._authorizer.on('access-success', access => this._handleAuthorizationSuccess(access))
         this._authorizer.on('access-failure', access => this._handleAuthorizationFailure(access))
+        this._authorizer.on('debug', message => this.emit('debug', message))
         this._authenticator.on('error', (message, err) => { 
             if(this.listenerCount('authentication-error') > 0) {
                 this.emit('authentication-error', message, err)
@@ -62,7 +64,7 @@ export class AuthManager extends EventEmitter<Events>{
                 console.error(err) 
             }
         })
-
+        this._authenticator.on('debug', message => this.emit('debug', message))
     }
 
     /*
@@ -80,6 +82,7 @@ export class AuthManager extends EventEmitter<Events>{
     on(event: 'authorization-attempt', fn: (event: {tokenConfig: TokenConfig, license: string}) => void, context?: any): this
     on(event: 'authorization-success', fn: (event: {access: AccessSuccess}) => void, context?: any): this
     on(event: 'authorization-failure', fn: (event: {access: AccessFailure}) => void, context?: any): this
+    on(event: 'debug', fn: (message: string) => void, context?: any): this
     on(event: Events, fn: EventEmitter.ListenerFn, context?: any): this{
         return super.on(event, fn, context)
     }
@@ -94,6 +97,7 @@ export class AuthManager extends EventEmitter<Events>{
 
             const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
+            this.emit('debug', `AuthManager: Login and currently identity ${identity?.license}`)
             if(identity === null) {
                 this._authenticator.login()
 
@@ -141,6 +145,7 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
+        this.emit('debug', `AuthManager: Logging out`)
         try{
             this._authChangeNotifier?.disable()
 
@@ -187,6 +192,8 @@ export class AuthManager extends EventEmitter<Events>{
         const defaultHandler = () => { }
 
         if(this._config.logoutHandler){
+            this.emit('debug', `AuthManager: Using custom logout handler`)
+
             this._config.logoutHandler(defaultHandler)
         }
     }
@@ -201,6 +208,7 @@ export class AuthManager extends EventEmitter<Events>{
         const defaultHandler = () => window.location.reload()
 
         if(this._config.licenseChangeHandler){
+            this.emit('debug', `AuthManager: Using custom license change handler`)
             this._config.licenseChangeHandler(event, defaultHandler)
         }else{
             defaultHandler()
@@ -220,6 +228,8 @@ export class AuthManager extends EventEmitter<Events>{
         if(!identity){
             return this.logout(window.location.href)
         }
+
+        this.emit('debug', `AuthManager: Handling auth change to ${attemptedLicense}`)
 
         if(identity.license !== (this.identity?.license ?? '')){
             return this._handleLicenseChanged(identity)
