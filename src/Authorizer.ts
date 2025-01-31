@@ -1,4 +1,4 @@
-import { WebAuth } from 'auth0-js'
+import { CheckSessionOptions, WebAuth } from 'auth0-js'
 
 import EventEmitter from 'eventemitter3'
 import * as types from './types'
@@ -21,7 +21,7 @@ export class Authorizer extends EventEmitter<Events>{
     constructor(config: Partial<types.AuthorizerConfig>, private _webAuth: WebAuth){
         super()
 
-        this._config = { ...defaultConfig, ...config ?? {} }
+        this._config = { ...defaultConfig, ...config ?? {}, optionsAuth0: { ...defaultConfig.optionsAuth0, ...config.optionsAuth0 ?? {} } }
     }
 
     /**
@@ -145,12 +145,13 @@ export class Authorizer extends EventEmitter<Events>{
         const [identityId, clientId, userId] = license.split(';')
 
         // NB: We add a serial number to keep each state unique. checkSession needs this when called several times in parallel
-        const opts = {
+        const opts: CheckSessionOptions = {
             audience: tokenConfig.audience,
             scope: tokenConfig.scopes.join(' '),
             state: `identityId:${identityId};clientId:${clientId};userId:${userId};unique:${++this._checkSessionCount}`,
+            //login_hint: `${identityId};${clientId};${userId}`,
             responseType: 'token',
-            redirectUri: this._config.sessionCallbackUrl,
+            redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
 

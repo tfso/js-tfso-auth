@@ -27,7 +27,7 @@ const userHasAllRequiredProfileInfo = (identity: Identity) => {
 export class AuthManager extends EventEmitter<Events>{
     private _authenticator: Authenticator
     private _authorizer: Authorizer
-    private _authChangeNotifier: AuthChangeNotifier
+    private _authChangeNotifier: AuthChangeNotifier | undefined
     private _config: AuthManagerConfig
 
     identity: Identity | null = null
@@ -36,7 +36,15 @@ export class AuthManager extends EventEmitter<Events>{
         super()
         this._authenticator = authenticator
         this._authorizer = authorizer
-        this._authChangeNotifier = new AuthChangeNotifier(authenticator)
+
+        if(config.disableNotifier !== true) {
+            this._authChangeNotifier = new AuthChangeNotifier(authenticator)
+
+            this._authChangeNotifier.on('login', () => this._handleAuthChange())
+            this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
+            this._authChangeNotifier.on('logout', () => this.logout(window.location.href))
+            this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
+        }
 
         this._config = { ...{
             tokens: [],
@@ -55,10 +63,6 @@ export class AuthManager extends EventEmitter<Events>{
             }
         })
 
-        this._authChangeNotifier.on('login', () => this._handleAuthChange())
-        this._authChangeNotifier.on('change', (license?: string) => this._handleAuthChange(license))
-        this._authChangeNotifier.on('logout', () => this._handleAuthChange())
-        this._authChangeNotifier.on('connection-failed', () => this.emit('authentication-notifications-unavailable'))
     }
 
     /*
@@ -80,10 +84,15 @@ export class AuthManager extends EventEmitter<Events>{
         return super.on(event, fn, context)
     }
 
+    /**
+     * Login to the system and authorize tokens if successful, otherwise redirect to login page
+     */
     async login(){
         this.emit('authentication-attempt')
         try{
-            const identity: Identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
+            this._authChangeNotifier?.disable()
+
+            const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
             if(identity === null) {
                 this._authenticator.login()
@@ -96,14 +105,19 @@ export class AuthManager extends EventEmitter<Events>{
                 this.requireValidProfile(identity)
             }
             this.emit('authentication-success', {identity})
-            this._authChangeNotifier.listen(identity.license)
+            this._authChangeNotifier?.listen(identity.license)
         }catch(err){
             this.identity = null
             this.emit('authentication-failure', {err})
             
+            this._authenticator.login()
+
             return false
         }
-
+        finally {
+            this._authChangeNotifier?.enable()
+        }
+        
         this.emit('authorization-start')
         await Promise.all(this._config.tokens.map(tokenConfig => this.authorize(tokenConfig, this.identity!.license)))
         this.emit('authorization-complete')
@@ -112,15 +126,8 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async changeActiveLicense(newLicense: string){
-        try {
-            this._authChangeNotifier.disable()
-
-            await this._authenticator.changeActiveLicense(newLicense)
-            await this._handleAuthChange(newLicense)
-        }
-        finally {
-            this._authChangeNotifier.enable()
-        }
+        await this._authenticator.changeActiveLicense(newLicense)
+        await this._handleAuthChange(newLicense)
     }
 
     hasValidProfile(identity: Identity){
@@ -134,9 +141,18 @@ export class AuthManager extends EventEmitter<Events>{
     }
 
     async logout(returnUrl?: string){
-        this._handleLoggedOut()
-        
-        return this._authenticator.logout(returnUrl)
+        try{
+            this._authChangeNotifier?.disable()
+
+            this._handleLoggedOut()
+            await this._authenticator.logout(returnUrl)
+        }
+        catch(err){
+            this.emit('authentication-error', 'Error when logging out', err)
+        }
+        finally{
+            this._authChangeNotifier?.enable()
+        }
     }
 
     async callback(){
@@ -168,12 +184,10 @@ export class AuthManager extends EventEmitter<Events>{
     private _handleLoggedOut(){
         this.emit('authentication-logout')
 
-        const defaultHandler = () => this._authenticator.login()
+        const defaultHandler = () => { }
 
         if(this._config.logoutHandler){
             this._config.logoutHandler(defaultHandler)
-        }else{
-            defaultHandler()
         }
     }
 
@@ -204,10 +218,10 @@ export class AuthManager extends EventEmitter<Events>{
     private async _handleAuthChange(attemptedLicense?: string){
         const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull(attemptedLicense)
         if(!identity){
-            return this._handleLoggedOut()
+            return this.logout(window.location.href)
         }
 
-        if(identity.license !== (this.identity != null ? this.identity.license : '')){
+        if(identity.license !== (this.identity?.license ?? '')){
             return this._handleLicenseChanged(identity)
         }
     }

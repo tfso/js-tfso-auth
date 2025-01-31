@@ -1,4 +1,4 @@
-import { Auth0DecodedHash, WebAuth } from 'auth0-js'
+import { WebAuth } from 'auth0-js'
 import EventEmitter from 'eventemitter3'
 
 import * as types from './types'
@@ -23,10 +23,26 @@ export class Authenticator extends EventEmitter<Events> {
     constructor(config: Partial<types.AuthenticatorConfig>, private _webAuth: WebAuth) {
         super()
 
-        this._config = { ...defaultConfig, ...config ?? {} }
+        this._config = { ...defaultConfig, ...config ?? {}, optionsAuth0: { ...defaultConfig.optionsAuth0, ...config.optionsAuth0 ?? {} } }
     }
 
-    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string) {
+    get webAuth() {
+        return this._webAuth
+    }
+
+    private get loginUrl() {
+        return typeof this._config.loginUrl === 'function'
+            ? this._config.loginUrl()
+            : this._config.loginUrl
+    }
+
+    private get logoutUrl() {
+        return typeof this._config.logoutUrl === 'function'
+            ? this._config.logoutUrl()
+            : this._config.logoutUrl
+    }
+
+    async getCurrentlyLoggedInIdentityOrNull(attemptedLicense?: string): Promise<types.Identity | null> {
         try {
             if(this._identityIsBeingFetched)
                 await assert(() => !this._identityIsBeingFetched)
@@ -76,7 +92,7 @@ export class Authenticator extends EventEmitter<Events> {
         return identity
     }
 
-    login() {
+    login(returnUrl?: string) {
         const redirectUrl = new URL(this._config.callbackUrl ?? `/modules/auth/login-callback`, window.location.origin)
 
         if(window.location.search){
@@ -84,6 +100,12 @@ export class Authenticator extends EventEmitter<Events> {
                 redirectUrl.searchParams.append(key, value)
             }
         }
+
+        if(returnUrl){
+            redirectUrl.searchParams.set('returnUrl', returnUrl)
+        }
+
+        this._removeAuth0TemporaryCookies()
 
         this._webAuth.authorize({
             audience: 'https://app.24sevenoffice.com',
@@ -93,42 +115,43 @@ export class Authenticator extends EventEmitter<Events> {
     }
 
     async logout(returnUrl?: string) {
-        const returnTo = returnUrl ?? `${this._baseUrl}/login`
+        const returnTo = new URL(this.loginUrl ?? `${this._baseUrl}/modules/auth/login/`, window.location.origin)
+        
+        if(returnUrl){
+            returnTo.searchParams.set('returnUrl', returnUrl)
+        }
 
         await Promise.all([
             fetch(`${this._baseUrl}/script/client/login/logoff.asp?_dc=${Date.now()}`, { credentials: 'same-origin' }),
             fetch(`${this._baseUrl}/login/data/Logout.aspx`, { method: 'POST', credentials: 'same-origin' })
         ])
 
-        this._webAuth.logout({ 
-            returnTo
+        this._webAuth.logout({
+            returnTo: returnTo.toString()
         })
     }
 
     /**
      * Verify callback from login provider
-     * @returns The token if the user is logged in, otherwise null
+     * @returns The identity if the user is logged in, otherwise null
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
-    async callback(): Promise<Auth0DecodedHash | null> {
+    async callback(): Promise<Record<string, any> | null> {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token = await parseHarsh()
 
         await this._setLegacyCookieIfPossible(token)
 
-        return token
+        const identity = this._getIdentityOrNullIfCookieRequired()
+        return identity
     }
 
-    redirectToLogin(){
-        window.location.href = typeof this._config.loginUrl === 'function'
-            ? this._config.loginUrl()
-            : this._config.loginUrl
+    public redirectToLogin(){
+        window.location.href = this.loginUrl
     }
 
-    redirectToLogout(){
-        window.location.href = typeof this._config.logoutUrl === 'function'
-            ? this._config.logoutUrl()
-            : this._config.logoutUrl
+    public redirectToLogout(){
+        window.location.href = this.logoutUrl
     }
 
     private async _getIdentityOrNullIfCookieRequired(){
@@ -182,7 +205,7 @@ export class Authenticator extends EventEmitter<Events> {
         const opts = {
             audience: 'https://app.24sevenoffice.com',
             responseType: 'token',
-            redirectUri: this._config.sessionCallbackUrl,
+            redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
 
@@ -243,6 +266,15 @@ export class Authenticator extends EventEmitter<Events> {
         )
     }
 
+    private _removeAuth0TemporaryCookies() {
+        for(const cookie of document.cookie.split(';')) {
+            const name = cookie.trim().split('=')[0]
+            
+            if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
+                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
+            }
+        }
+    }
 }
 
 const cacheBustUrl = url => {

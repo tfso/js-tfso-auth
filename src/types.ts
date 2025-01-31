@@ -20,6 +20,7 @@ export interface AuthManagerConfig{
     licenseChangeHandler?: (event: LicenseChangeEvent, defaultHandler: () => void) => any
     tokens: TokenConfig[]
     requireValidProfile: boolean
+    disableNotifier?: boolean
 }
 
 export interface TokenConfig{
@@ -39,7 +40,7 @@ export interface AuthenticatorConfig{
     loginUrl: string | (() => string)
     logoutUrl: string | (() => string)
     callbackUrl: string
-    sessionCallbackUrl: string
+    sessionCallbackUrl?: string
 }
 
 export type AuthorizerConfig = AuthenticatorConfig

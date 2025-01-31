@@ -11,7 +11,7 @@ const config: AuthenticatorConfig = {
     loginUrl: () => `/modules/auth/login/?returnUrl=${encodeURIComponent(window.location.origin + window.location.pathname)}`,
     logoutUrl: () => `/modules/auth/logout`,
     callbackUrl: `${window.location.origin}/modules/auth/login-callback`,
-    sessionCallbackUrl: `${window.location.origin}/modules/auth/login-callback`
+    sessionCallbackUrl: undefined
 }
 
 export default config
