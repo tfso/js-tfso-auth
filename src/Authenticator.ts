@@ -133,17 +133,19 @@ export class Authenticator extends EventEmitter<Events> {
 
     /**
      * Verify callback from login provider
-     * @returns The identity if the user is logged in, otherwise null
+     * @returns The identityId and token
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
-    async callback(): Promise<Record<string, any> | null> {
+    async callback() {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
-        const token = await parseHarsh()
+        const token: types.Auth0Token = await parseHarsh()
 
-        await this._setLegacyCookieIfPossible(token)
+        const identityId = await this._setLegacyCookieIfPossible(token)
 
-        const identity = this._getIdentityOrNullIfCookieRequired()
-        return identity
+        return { 
+            identityId,
+            token
+        }
     }
 
     public redirectToLogin(){
@@ -154,7 +156,7 @@ export class Authenticator extends EventEmitter<Events> {
         window.location.href = this.logoutUrl
     }
 
-    private async _getIdentityOrNullIfCookieRequired(){
+    private async _getIdentityOrNullIfCookieRequired(): Promise<types.Identity | null> {
         const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
@@ -183,16 +185,28 @@ export class Authenticator extends EventEmitter<Events> {
 
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
-            await fetch(this._config.authenticateJwtUrl, {
+            const response = await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + token.accessToken
                 }
             })
+
+            if(response.ok) {
+                const body = await response.json() 
+
+                if(body)
+                    return String(body.identity.id) || null // this exists in the token as claim https://app.24sevenoffice.com/identityId as well
+            }
+
+            return null
+
         }catch(err){
             this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
+
+            return null
         }
     }
 
