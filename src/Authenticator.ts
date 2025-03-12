@@ -149,6 +149,15 @@ export class Authenticator extends EventEmitter<Events> {
         }
     }
 
+    async getIdToken() {
+        try {
+            const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+            return token?.idToken
+        } catch (err) {
+            return undefined
+        }
+    }
+
     public redirectToLogin(){
         window.location.href = this.loginUrl
     }
@@ -217,7 +226,7 @@ export class Authenticator extends EventEmitter<Events> {
         return undefined
     }
 
-    private async _getIdentityApiTokenOrNulIfAuthRequired(){
+    private async _getIdentityApiTokenOrNulIfAuthRequired(): Promise<types.Auth0Token | null>{
         /*
         In the future this should be a token for the identity api,
         but since the identity api only supports cookie
