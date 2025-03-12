@@ -140,10 +140,11 @@ export class Authenticator extends EventEmitter<Events> {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
         const token: types.Auth0Token = await parseHarsh()
 
-        const identityId = await this._setLegacyCookieIfPossible(token)
+        const { license, identity } = await this._setLegacyCookieIfPossible(token) ?? {}
 
         return { 
-            identityId,
+            license,
+            identity,
             token
         }
     }
@@ -196,17 +197,21 @@ export class Authenticator extends EventEmitter<Events> {
             if(response.ok) {
                 const body = await response.json() 
 
-                if(body)
-                    return String(body.identity.id) || null // this exists in the token as claim https://app.24sevenoffice.com/identityId as well
+                if(body) {
+                    // license and identityId exists in the token as claims as well
+                    const license = this._getLicenseFromWebTokenData(body._embedded?.data)
+
+                    return {
+                        license,
+                        identity: {
+                            id: String(body.identity.id) || undefined 
+                        }
+                    }
+                }
             }
-
-            return null
-
         }catch(err){
             this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
-
-            return null
         }
     }
 
@@ -287,6 +292,18 @@ export class Authenticator extends EventEmitter<Events> {
             if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
                 document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
             }
+        }
+    }
+
+    private _getLicenseFromWebTokenData(data?: Array<{ id: string, value: string }>){
+        const dictionary = Array.from(data ?? []).reduce((acc, { id, value }) => (acc[id] = value, acc), {})
+
+        const identityId = dictionary['Office24Seven_Library_Core_Passport_Id']
+        const clientId = dictionary['Office24Seven_Library_Core_Client_Id']
+        const userId = dictionary['Office24Seven_Library_Core_User_Id']
+
+        if(identityId && clientId && userId){
+            return `${identityId};${clientId};${userId}`
         }
     }
 }
