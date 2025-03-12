@@ -213,6 +213,8 @@ export class Authenticator extends EventEmitter<Events> {
             this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
         }
+
+        return undefined
     }
 
     private async _getIdentityApiTokenOrNulIfAuthRequired(){
@@ -305,6 +307,8 @@ export class Authenticator extends EventEmitter<Events> {
         if(identityId && clientId && userId){
             return `${identityId};${clientId};${userId}`
         }
+
+        return undefined
     }
 }
 
