@@ -3,7 +3,7 @@ import { AuthenticatorConfig } from "./types"
 const config: AuthenticatorConfig = {
     optionsAuth0: {
         clientID: 'INGoYuDZDgaxT8JOL64M7vnJcxEGxCi0',
-        domain: 'login.24SevenOffice.com',
+        domain: 'login.24sevenoffice.com',
         configurationBaseUrl: 'tfso.eu.auth0.com'
     },
     identityApiUrl: 'https://identity.api.24sevenoffice.com',
