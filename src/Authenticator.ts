@@ -301,7 +301,7 @@ export class Authenticator extends EventEmitter<Events> {
             const name = cookie.trim().split('=')[0]
             
             if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
-                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
+                document.cookie = `${name}=; Path=/; Expires=${new Date(0).toUTCString()}`
             }
         }
     }
