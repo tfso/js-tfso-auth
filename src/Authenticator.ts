@@ -133,17 +133,29 @@ export class Authenticator extends EventEmitter<Events> {
 
     /**
      * Verify callback from login provider
-     * @returns The identity if the user is logged in, otherwise null
+     * @returns The identityId and token
      * @throws {{ error: string, errorDescription: string, state?: string }} If the user is not logged in
      */
-    async callback(): Promise<Record<string, any> | null> {
+    async callback() {
         const parseHarsh = promisify(this._webAuth.parseHash.bind(this._webAuth))
-        const token = await parseHarsh()
+        const token: types.Auth0Token = await parseHarsh()
 
-        await this._setLegacyCookieIfPossible(token)
+        const { license, identity } = await this._setLegacyCookieIfPossible(token) ?? {}
 
-        const identity = this._getIdentityOrNullIfCookieRequired()
-        return identity
+        return { 
+            license,
+            identity,
+            token
+        }
+    }
+
+    async getIdToken() {
+        try {
+            const token = await this._getIdentityApiTokenOrNulIfAuthRequired()
+            return token?.idToken
+        } catch (err) {
+            return undefined
+        }
     }
 
     public redirectToLogin(){
@@ -154,7 +166,7 @@ export class Authenticator extends EventEmitter<Events> {
         window.location.href = this.logoutUrl
     }
 
-    private async _getIdentityOrNullIfCookieRequired(){
+    private async _getIdentityOrNullIfCookieRequired(): Promise<types.Identity | null> {
         const res = await fetch(cacheBustUrl(this._config.identityApiUrl), {
             method: 'GET',
             credentials: 'include',
@@ -183,20 +195,38 @@ export class Authenticator extends EventEmitter<Events> {
 
     private async _setLegacyCookieIfPossible(token: types.Auth0Token){
         try{
-            await fetch(this._config.authenticateJwtUrl, {
+            const response = await fetch(this._config.authenticateJwtUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + token.accessToken
                 }
             })
+
+            if(response.ok) {
+                const body = await response.json() 
+
+                if(body) {
+                    // license and identityId exists in the token as claims as well
+                    const license = this._getLicenseFromWebTokenData(body._embedded?.data)
+
+                    return {
+                        license,
+                        identity: {
+                            id: String(body.identity.id) || undefined 
+                        }
+                    }
+                }
+            }
         }catch(err){
             this.emit('error', 'Setting Legacy cookie failed', err)
             // Ignore any errors. This function is best effort, and will not work in local dev for example.
         }
+
+        return undefined
     }
 
-    private async _getIdentityApiTokenOrNulIfAuthRequired(){
+    private async _getIdentityApiTokenOrNulIfAuthRequired(): Promise<types.Auth0Token | null>{
         /*
         In the future this should be a token for the identity api,
         but since the identity api only supports cookie
@@ -204,7 +234,7 @@ export class Authenticator extends EventEmitter<Events> {
          */
         const opts = {
             audience: 'https://app.24sevenoffice.com',
-            responseType: 'token',
+            responseType: 'token id_token',
             redirectUri: this._config.sessionCallbackUrl ?? this._config.callbackUrl,
             prompt: 'none'
         }
@@ -271,9 +301,23 @@ export class Authenticator extends EventEmitter<Events> {
             const name = cookie.trim().split('=')[0]
             
             if (name.startsWith('_com.auth0.auth.') || name.startsWith('com.auth0.auth.')) {
-                document.cookie = `${name}=; Domain=${location.hostname}; Path=/; Secure; SameSite=None; Expires=${new Date(0).toUTCString()}`
+                document.cookie = `${name}=; Path=/; Expires=${new Date(0).toUTCString()}`
             }
         }
+    }
+
+    private _getLicenseFromWebTokenData(data?: Array<{ id: string, value: string }>){
+        const dictionary = Array.from(data ?? []).reduce((acc, { id, value }) => (acc[id] = value, acc), {})
+
+        const identityId = dictionary['Office24Seven_Library_Core_Passport_Id']
+        const clientId = dictionary['Office24Seven_Library_Core_Client_Id']
+        const userId = dictionary['Office24Seven_Library_Core_User_Id']
+
+        if(identityId && clientId && userId){
+            return `${identityId};${clientId};${userId}`
+        }
+
+        return undefined
     }
 }
 
