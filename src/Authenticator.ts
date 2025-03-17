@@ -310,8 +310,8 @@ export class Authenticator extends EventEmitter<Events> {
         const dictionary = Array.from(data ?? []).reduce((acc, { id, value }) => (acc[id] = value, acc), {})
 
         const identityId = dictionary['Office24Seven_Library_Core_Passport_Id']
-        const clientId = dictionary['Office24Seven_Library_Core_Client_Id']
-        const userId = dictionary['Office24Seven_Library_Core_User_Id']
+        const clientId = String(Number(dictionary['Office24Seven_Library_Core_Client_Id']) || '')
+        const userId = String(Number(dictionary['Office24Seven_Library_Core_User_Id']) || '')
 
         if(identityId && clientId && userId){
             return `${identityId};${clientId};${userId}`
