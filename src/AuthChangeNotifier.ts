@@ -19,6 +19,8 @@ type Events =
     'logout' |
     'change'
 
+const environment: Record<string, any> = window && window['__env__'] && typeof window['__env__'] == 'object' ? window['__env__'] : {}
+
 export class AuthChangeNotifier extends EventEmitter<Events>{
     private _ably: Realtime
     private _lastLoginCheck: number
@@ -31,8 +33,10 @@ export class AuthChangeNotifier extends EventEmitter<Events>{
         this._authenticator = authenticator
         this._lastLoginCheck = Date.now()
 
+        const authUrl = `https://${environment['ably.api'] ?? 'ably.api.24sevenoffice.com'}/auth`
+
         this._ably = new Realtime({
-            authUrl: 'https://ably.api.24sevenoffice.com/auth',
+            authUrl,
             authHeaders: {authorization: 'IGNORED'},
             autoConnect: false
         })
