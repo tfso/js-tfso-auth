@@ -95,7 +95,7 @@ export class AuthManager extends EventEmitter<Events>{
             const identity = await this._authenticator.getCurrentlyLoggedInIdentityOrNull()
 
             if(identity === null) {
-                this._authenticator.login()
+                this._authenticator.login(window.location.href)
 
                 return false
             }
@@ -110,7 +110,7 @@ export class AuthManager extends EventEmitter<Events>{
             this.identity = null
             this.emit('authentication-failure', {err})
             
-            this._authenticator.login()
+            this._authenticator.login(window.location.href)
 
             return false
         }
